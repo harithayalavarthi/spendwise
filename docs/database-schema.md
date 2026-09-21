@@ -134,9 +134,28 @@ accounts, not spent).
   cadence + amount-consistency detection; see the README for the exact
   thresholds. Its "as of" reference date is the most recent date among
   *matching* rows (`amount < 0 AND category != 'Transfers'`) — a transaction
-  that's miscategorized or mis-signed (see the Scotiabank sign-convention
-  issue under discussion with the user as of this writing) is invisible to
-  this query, which can silently understate how overdue a missed payment is.
+  that's miscategorized or mis-signed is invisible to this query, which can
+  silently understate how overdue a missed payment is (concretely: this is
+  why a test recurring charge showed "due soon" rather than "missed" in
+  session testing — the KNOWN ISSUES entry below suppressed the true most
+  recent expense date).
+
+## Known issues
+
+- **Scotiabank CSV imports have expenses stored as positive amounts.** All 67
+  transactions from the 3 `Transaction History_*.csv` statements (Scotia
+  Bank) are positive, though correctly *categorized* (e.g. "Groceries",
+  "Utilities & Bills") — real expenses, not income. Because every
+  income/expense total in this app goes off the amount's sign, not the
+  category, these are currently counted as income: total income is
+  overstated, total expenses understated, and these rows are invisible to
+  anything filtering on `amount < 0` (category charts, recurring-payment
+  detection). Root cause not yet confirmed — likely a debit/credit
+  indicator column in the source CSV that `parseStatement.ts` doesn't check
+  (it only reads a single amount column, or separate debit/credit *amount*
+  columns, not a separate debit/credit *type* column). Flagged to the user
+  2026-09-21; left uncorrected at their request ("don't touch it yet") —
+  revisit before trusting this dataset's income/expense totals.
 
 ## Categorization pipeline (how `category` gets set)
 
