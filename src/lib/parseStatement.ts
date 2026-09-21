@@ -44,7 +44,7 @@ function findColumn(headers: string[], candidates: string[]): string | undefined
   return undefined;
 }
 
-function parseAmount(raw: string | undefined): number | undefined {
+export function parseAmountToken(raw: string | undefined): number | undefined {
   if (raw == null) return undefined;
   let s = raw.trim();
   if (s === "") return undefined;
@@ -60,7 +60,7 @@ function parseAmount(raw: string | undefined): number | undefined {
   return negative ? -Math.abs(n) : n;
 }
 
-function parseDate(raw: string): string {
+export function parseDateToken(raw: string): string {
   const trimmed = raw.trim();
   const d = new Date(trimmed);
   if (!Number.isNaN(d.getTime())) {
@@ -105,10 +105,10 @@ export function parseStatementCsv(csvText: string): ParseResult {
 
     let amount: number | undefined;
     if (amountCol) {
-      amount = parseAmount(row[amountCol]);
+      amount = parseAmountToken(row[amountCol]);
     } else {
-      const debit = parseAmount(row[debitCol ?? ""]);
-      const credit = parseAmount(row[creditCol ?? ""]);
+      const debit = parseAmountToken(row[debitCol ?? ""]);
+      const credit = parseAmountToken(row[creditCol ?? ""]);
       if (debit != null && debit !== 0) amount = -Math.abs(debit);
       else if (credit != null && credit !== 0) amount = Math.abs(credit);
       else if (debit === 0 || credit === 0) amount = 0;
@@ -120,7 +120,7 @@ export function parseStatementCsv(csvText: string): ParseResult {
     }
 
     transactions.push({
-      date: parseDate(dateRaw),
+      date: parseDateToken(dateRaw),
       description,
       amount,
     });

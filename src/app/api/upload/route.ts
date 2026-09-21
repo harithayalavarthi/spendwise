@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { parseStatementCsv } from "@/lib/parseStatement";
+import { parseStatementPdf } from "@/lib/parsePdfStatement";
 import { categorize } from "@/lib/categories";
+import { transactionHash } from "@/lib/dedupe";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -11,15 +13,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  if (!file.name.toLowerCase().endsWith(".csv")) {
+  const name = file.name.toLowerCase();
+  const isCsv = name.endsWith(".csv");
+  const isPdf = name.endsWith(".pdf");
+
+  if (!isCsv && !isPdf) {
     return NextResponse.json(
-      { error: "Only CSV files are supported right now" },
+      { error: "Only CSV or PDF statements are supported" },
       { status: 400 }
     );
   }
 
-  const text = await file.text();
-  const { transactions, skippedRows, warning } = parseStatementCsv(text);
+  const { transactions, skippedRows, warning } = isCsv
+    ? parseStatementCsv(await file.text())
+    : await parseStatementPdf(Buffer.from(await file.arrayBuffer()));
 
   if (transactions.length === 0) {
     return NextResponse.json(
@@ -33,26 +40,44 @@ export async function POST(request: NextRequest) {
     `INSERT INTO statements (filename, transaction_count) VALUES (?, ?)`
   );
   const insertTransaction = db.prepare(
-    `INSERT INTO transactions (statement_id, date, description, amount, category)
-     VALUES (?, ?, ?, ?, ?)`
+    `INSERT INTO transactions (statement_id, date, description, amount, category, hash)
+     VALUES (?, ?, ?, ?, ?, ?)`
   );
+  const findExisting = db.prepare(`SELECT 1 FROM transactions WHERE hash = ? LIMIT 1`);
 
   const categoryCounts: Record<string, number> = {};
+  let duplicates = 0;
 
   const statementId = db.transaction(() => {
-    const info = insertStatement.run(file.name, transactions.length);
-    const id = info.lastInsertRowid as number;
+    const seenInThisUpload = new Set<string>();
+    const toInsert: Array<{ date: string; description: string; amount: number; category: string; hash: string }> = [];
+
     for (const t of transactions) {
+      const hash = transactionHash(t.date, t.description, t.amount);
+      if (seenInThisUpload.has(hash) || findExisting.get(hash)) {
+        duplicates++;
+        continue;
+      }
+      seenInThisUpload.add(hash);
       const category = categorize(t.description, t.amount);
       categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-      insertTransaction.run(id, t.date, t.description, t.amount, category);
+      toInsert.push({ date: t.date, description: t.description, amount: t.amount, category, hash });
+    }
+
+    const info = insertStatement.run(file.name, toInsert.length);
+    const id = info.lastInsertRowid as number;
+    for (const t of toInsert) {
+      insertTransaction.run(id, t.date, t.description, t.amount, t.category, t.hash);
     }
     return id;
   })();
 
+  const imported = transactions.length - duplicates;
+
   return NextResponse.json({
     statementId,
-    imported: transactions.length,
+    imported,
+    duplicates,
     skippedRows,
     warning,
     categoryCounts,

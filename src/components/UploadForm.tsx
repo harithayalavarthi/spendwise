@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 
 interface UploadResult {
   imported: number;
+  duplicates: number;
   skippedRows: number;
   warning?: string;
   categoryCounts: Record<string, number>;
@@ -51,12 +52,12 @@ export default function UploadForm() {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            Bank statement (CSV)
+            Bank statement (CSV or PDF)
           </span>
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,text/csv,.pdf,application/pdf"
             required
             className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-secondary)] file:mr-3 file:rounded file:border-0 file:bg-[var(--series-1)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
           />
@@ -80,7 +81,10 @@ export default function UploadForm() {
         <div className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] p-4 text-sm">
           <p className="font-medium text-[var(--text-primary)]">
             Imported {result.imported} transaction{result.imported === 1 ? "" : "s"}
-            {result.skippedRows > 0 ? ` (${result.skippedRows} rows skipped)` : ""}
+            {result.duplicates > 0
+              ? ` (${result.duplicates} duplicate${result.duplicates === 1 ? "" : "s"} skipped)`
+              : ""}
+            {result.skippedRows > 0 ? ` (${result.skippedRows} unrecognized rows skipped)` : ""}
           </p>
           {result.warning && (
             <p className="mt-1 text-[var(--status-warning)]">{result.warning}</p>
