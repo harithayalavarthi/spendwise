@@ -11,7 +11,7 @@
     "start": "next start",
     "lint": "eslint",
     "electron:compile": "tsc -p tsconfig.electron.json",
-    "electron:prepare": "rm -rf .next/standalone dist-electron && next build && cp -r public .next/standalone/ && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && npm run electron:compile",
+    "electron:prepare": "node scripts/electron-prepare.js",
     "electron:dev": "npm run electron:prepare && electron .",
     "dist:mac": "npm run electron:prepare && electron-builder --mac",
     "dist:win": "npm run electron:prepare && electron-builder --win",

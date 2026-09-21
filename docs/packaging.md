@@ -53,15 +53,21 @@ documented standalone-deployment steps, compiles `electron/*.ts` via
 `tsconfig.electron.json`), then `electron-builder`.
 
 **Windows caveat**: only the macOS `.dmg` path has actually been built and
-run end-to-end (this was developed on macOS). The Windows build is written
-correctly by config and reasoning, but has only been *verified* via the
-GitHub Actions workflow building on a real `windows-latest` runner, never on
-an actual Windows machine locally. If you're on Windows and hit something
-this doc doesn't cover, that's the most likely place a gap would be.
-`package.json`'s scripts use POSIX shell (`rm -rf`, `cp -r`, `mkdir -p`), so
-run them via Git Bash or WSL, not a bare PowerShell/cmd prompt — the CI
-workflow does this explicitly (`shell: bash` on every step, since
-`windows-latest` ships Git for Windows).
+run end-to-end locally (this was developed on macOS); the Windows path is
+verified by the CI workflow building on a real `windows-latest` runner.
+
+`electron:prepare` ([scripts/electron-prepare.js](../scripts/electron-prepare.js))
+is a plain Node script, not a shell one-liner — **found out the hard way**:
+the original version chained POSIX commands (`rm -rf`, `cp -r`, `mkdir -p`,
+plus a nested `npm run electron:compile`) and passed on macOS, but the very
+first real Windows CI run failed with a bare Windows shell error (`The
+syntax of the command is incorrect.`) right after `next build` finished —
+even with the GitHub Actions step's outer shell explicitly set to
+`shell: bash`. The nested `npm run electron:compile` call doesn't
+necessarily inherit that shell; npm resolves its own script-shell per
+invocation. Node's `fs`/`child_process` APIs don't have this problem on any
+platform, which is why the prepare step is plain Node now rather than
+another layer of shell-detection workarounds.
 
 ## The `afterPack` hook — why it exists
 
