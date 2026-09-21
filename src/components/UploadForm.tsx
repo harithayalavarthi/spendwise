@@ -10,9 +10,11 @@ interface UploadResult {
   warning?: string;
   categoryCounts: Record<string, number>;
   llmCategorized: number;
+  totalTransactions: number;
+  totalStatements: number;
 }
 
-export default function UploadForm() {
+export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,7 @@ export default function UploadForm() {
       setResult(data);
       setStatus("done");
       router.refresh();
+      onUploaded?.();
     } catch {
       setError("Upload failed — check your connection and try again");
       setStatus("error");
@@ -81,11 +84,16 @@ export default function UploadForm() {
       {result && (
         <div className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] p-4 text-sm">
           <p className="font-medium text-[var(--text-primary)]">
-            Imported {result.imported} transaction{result.imported === 1 ? "" : "s"}
+            Imported {result.imported} new transaction{result.imported === 1 ? "" : "s"} from this file
             {result.duplicates > 0
               ? ` (${result.duplicates} duplicate${result.duplicates === 1 ? "" : "s"} skipped)`
               : ""}
             {result.skippedRows > 0 ? ` (${result.skippedRows} unrecognized rows skipped)` : ""}
+          </p>
+          <p className="mt-1 font-semibold text-[var(--series-1)]">
+            Nothing was overwritten — you now have {result.totalTransactions} transaction
+            {result.totalTransactions === 1 ? "" : "s"} stored across {result.totalStatements}{" "}
+            statement{result.totalStatements === 1 ? "" : "s"} in total.
           </p>
           {result.llmCategorized > 0 && (
             <p className="mt-1 text-[var(--text-secondary)]">

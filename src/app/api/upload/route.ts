@@ -80,6 +80,9 @@ export async function POST(request: NextRequest) {
   })();
 
   const imported = transactions.length - duplicates;
+  const totals = db
+    .prepare(`SELECT COUNT(*) AS transactions, (SELECT COUNT(*) FROM statements) AS statements FROM transactions`)
+    .get() as { transactions: number; statements: number };
 
   return NextResponse.json({
     statementId,
@@ -89,5 +92,7 @@ export async function POST(request: NextRequest) {
     warning,
     categoryCounts,
     llmCategorized: sourceCounts["llm"] ?? 0,
+    totalTransactions: totals.transactions,
+    totalStatements: totals.statements,
   });
 }
