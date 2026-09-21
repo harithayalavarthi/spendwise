@@ -36,8 +36,8 @@ export function getAnalytics(): Analytics {
   const totals = db
     .prepare(
       `SELECT
-         COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS income,
-         COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) AS expense,
+         COALESCE(SUM(CASE WHEN amount > 0 AND category != 'Transfers' THEN amount ELSE 0 END), 0) AS income,
+         COALESCE(SUM(CASE WHEN amount < 0 AND category != 'Transfers' THEN -amount ELSE 0 END), 0) AS expense,
          COUNT(*) AS count
        FROM transactions`
     )
@@ -57,8 +57,8 @@ export function getAnalytics(): Analytics {
     .prepare(
       `SELECT
          substr(date, 1, 7) AS month,
-         COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 0) AS income,
-         COALESCE(SUM(CASE WHEN amount < 0 THEN -amount ELSE 0 END), 0) AS expense
+         COALESCE(SUM(CASE WHEN amount > 0 AND category != 'Transfers' THEN amount ELSE 0 END), 0) AS income,
+         COALESCE(SUM(CASE WHEN amount < 0 AND category != 'Transfers' THEN -amount ELSE 0 END), 0) AS expense
        FROM transactions
        GROUP BY month
        ORDER BY month ASC`

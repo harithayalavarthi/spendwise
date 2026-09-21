@@ -38,14 +38,25 @@ statement from your bank.
 ## Notes
 
 - **CSV is more reliable than PDF.** PDF parsing (`src/lib/parsePdfStatement.ts`)
-  extracts raw text and guesses columns line-by-line with regex — it has no notion
-  of your bank's actual layout, and it guesses the debit/credit sign when a line
-  doesn't show one explicitly (keyword-based: "deposit", "payroll", etc. read as
-  income, everything else as an expense). Always spot-check a PDF import against
-  the actual statement, especially deposits. Scanned/image-only PDFs won't parse
-  at all — export CSV instead.
+  extracts raw text and locates transactions line-by-line with regex — it has no
+  notion of your bank's actual table layout. Handled per line: one or two leading
+  dates (transaction + posting date, with or without a year — the year is inferred
+  from the statement date/period printed elsewhere in the document), and an amount
+  token found anywhere on the line (column order in extracted text doesn't always
+  match the visual layout — some statements print the amount right after the date,
+  others at the end followed by a running balance, which is detected and dropped).
+  Always spot-check a PDF import against the actual statement. Scanned/image-only
+  PDFs won't parse at all — export CSV instead.
+- **Credit card statements are detected** (via "new balance" / "minimum payment" /
+  "credit limit" wording) and handled with the opposite sign convention from a
+  checking account: an unsigned line is a charge (expense), and a payment/credit
+  is categorized as a Transfer rather than income — otherwise paying down your
+  card would show up as a spike in "income." Transfers are excluded from income,
+  expense, and savings-rate totals everywhere in the dashboard.
 - Duplicate detection is a hash of (date, description, amount) — a false positive
   is possible if you have two genuinely identical transactions on the same day
   (e.g., two identical $5 coffees); the second one will be silently skipped.
-- Categorization is keyword-based (`src/lib/categories.ts`) — extend the keyword
-  lists there for merchants it misses.
+- Categorization is keyword-based (`src/lib/categories.ts`, punctuation-normalized
+  so "WAL-MART" matches "walmart") — extend the keyword lists there for merchants
+  it misses. Local/regional merchants will often land in "Other"; use the
+  Transactions page to fix them up.

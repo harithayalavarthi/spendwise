@@ -69,6 +69,15 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "diner",
       "pizza",
       "bar & grill",
+      "taco bell",
+      "subway",
+      "wendy",
+      "burger king",
+      "kfc",
+      "dunkin",
+      "tim hortons",
+      "panera",
+      "thai express",
     ],
   },
   {
@@ -129,6 +138,7 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "pharmacy",
       "cvs",
       "walgreens",
+      "shoppers drug mart",
       "doctor",
       "medical",
       "dental",
@@ -176,6 +186,8 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "annual fee",
       "late fee",
       "interest charge",
+      "retail interest",
+      "cash advance",
       "maintenance fee",
       "nsf fee",
       "withdrawal fee",
@@ -201,14 +213,28 @@ const RULES: Array<{ category: Category; keywords: string[] }> = [
       "paypal transfer",
       "acct xfer",
       "account transfer",
+      "payment - thank you",
+      "payment thank you",
+      "online payment",
+      "web payment",
+      "autopay",
+      "auto pay",
+      "bill payment",
     ],
   },
 ];
 
+// Strips punctuation that varies by formatting but not by meaning (WAL-MART
+// vs Walmart, MCDONALD'S vs McDonald) while preserving spaces so multi-word
+// keywords still match.
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/[.'-]/g, "");
+}
+
 export function categorize(description: string, amount: number): Category {
-  const text = description.toLowerCase();
+  const text = normalize(description);
   for (const rule of RULES) {
-    if (rule.keywords.some((kw) => text.includes(kw))) {
+    if (rule.keywords.some((kw) => text.includes(normalize(kw)))) {
       return rule.category;
     }
   }
