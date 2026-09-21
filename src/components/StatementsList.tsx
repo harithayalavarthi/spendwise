@@ -7,6 +7,7 @@ interface Statement {
   filename: string;
   uploadedAt: string;
   transactionCount: number;
+  institution: string | null;
 }
 
 export default function StatementsList({ refreshKey }: { refreshKey: number }) {
@@ -60,7 +61,14 @@ export default function StatementsList({ refreshKey }: { refreshKey: number }) {
             className="flex items-center justify-between gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm"
           >
             <div className="min-w-0">
-              <p className="truncate font-medium text-[var(--text-primary)]">{s.filename}</p>
+              <p className="truncate font-medium text-[var(--text-primary)]">
+                {s.filename}
+                {s.institution && (
+                  <span className="ml-2 rounded-full border border-[var(--border)] px-2 py-0.5 text-xs font-normal text-[var(--text-secondary)]">
+                    {s.institution}
+                  </span>
+                )}
+              </p>
               <p className="text-xs text-[var(--text-muted)]">
                 {s.uploadedAt} · {s.transactionCount} transaction{s.transactionCount === 1 ? "" : "s"}
               </p>

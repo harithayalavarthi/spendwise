@@ -18,6 +18,7 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
   const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [institution, setInstitution] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -32,6 +33,7 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
 
     const formData = new FormData();
     formData.append("file", file);
+    if (institution.trim()) formData.append("institution", institution.trim());
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
@@ -65,6 +67,31 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
             required
             className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-secondary)] file:mr-3 file:rounded file:border-0 file:bg-[var(--series-1)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
           />
+        </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-[var(--text-primary)]">
+            Financial institution <span className="font-normal text-[var(--text-muted)]">(optional)</span>
+          </span>
+          <input
+            type="text"
+            list="institution-suggestions"
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+            placeholder="e.g. TD Bank, Chase, RBC"
+            className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+          />
+          <datalist id="institution-suggestions">
+            <option value="TD Bank" />
+            <option value="Chase" />
+            <option value="Bank of America" />
+            <option value="Wells Fargo" />
+            <option value="Capital One" />
+            <option value="RBC" />
+            <option value="Scotiabank" />
+            <option value="BMO" />
+            <option value="CIBC" />
+            <option value="American Express" />
+          </datalist>
         </label>
         <button
           type="submit"

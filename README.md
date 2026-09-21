@@ -59,7 +59,7 @@ OLLAMA_HOST=http://localhost:11434
   rule-based suggestions (top category share, month-over-month spikes, savings
   rate, recurring subscriptions).
 - **Transactions** (`/transactions`): browse and manually re-categorize any
-  transaction; filter by category.
+  transaction; filter by category or by financial institution.
 
 ## Notes
 
@@ -101,3 +101,16 @@ OLLAMA_HOST=http://localhost:11434
   the same merchant is never re-classified — a manual correction on the
   Transactions page updates that same cache and permanently overrides any future
   LLM guess for that merchant, on this and future imports.
+- **Statement boilerplate is filtered out, not just miscategorized.** Balance
+  snapshot / summary lines a statement prints alongside real transactions —
+  "Opening Balance", "Closing Balance", "Previous Balance", "Total", etc. — have
+  the same date-plus-amount shape as a real transaction, so a heuristic parser
+  can mistake one for the other. These are recognized and dropped before they're
+  ever inserted (`src/lib/statementNoise.ts`), not filtered out later on the
+  dashboard, so a row that shows up in Transactions is always a real one.
+- **Financial institution** is an optional free-text field you can fill in on the
+  Upload page per statement (with autocomplete suggestions for a few common
+  banks) — it's not auto-detected from the file. It's stored on every
+  transaction from that statement, so you can filter the Transactions page by
+  institution for FI-level analysis. Statements uploaded before this existed
+  show as "—" (no institution) until re-uploaded with one set.

@@ -13,6 +13,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
+  const institution = (formData.get("institution") as string | null)?.trim() || null;
+
   const name = file.name.toLowerCase();
   const isCsv = name.endsWith(".csv");
   const isPdf = name.endsWith(".pdf");
@@ -63,18 +65,18 @@ export async function POST(request: NextRequest) {
   }
 
   const insertStatement = db.prepare(
-    `INSERT INTO statements (filename, transaction_count) VALUES (?, ?)`
+    `INSERT INTO statements (filename, transaction_count, institution) VALUES (?, ?, ?)`
   );
   const insertTransaction = db.prepare(
-    `INSERT INTO transactions (statement_id, date, description, amount, category, hash)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO transactions (statement_id, date, description, amount, category, hash, institution)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   );
 
   const statementId = db.transaction(() => {
-    const info = insertStatement.run(file.name, toInsert.length);
+    const info = insertStatement.run(file.name, toInsert.length, institution);
     const id = info.lastInsertRowid as number;
     for (const t of toInsert) {
-      insertTransaction.run(id, t.date, t.description, t.amount, t.category, t.hash);
+      insertTransaction.run(id, t.date, t.description, t.amount, t.category, t.hash, institution);
     }
     return id;
   })();

@@ -17,6 +17,7 @@ erDiagram
         TEXT filename
         TEXT uploaded_at
         INTEGER transaction_count
+        TEXT institution
     }
 
     TRANSACTIONS {
@@ -28,6 +29,7 @@ erDiagram
         TEXT category
         INTEGER category_locked
         TEXT hash
+        TEXT institution
     }
 
     MERCHANT_CATEGORIES {
@@ -52,6 +54,7 @@ uploads never delete or modify existing rows.
 | `filename`           | TEXT    | Original uploaded filename, as-is                              |
 | `uploaded_at`        | TEXT    | `datetime('now')` at insert time (UTC)                        |
 | `transaction_count`  | INTEGER | Count of *newly inserted* transactions from this upload (excludes duplicates skipped from this same file) |
+| `institution`        | TEXT    | Free-text label the user optionally types in on the Upload page (e.g. "TD Bank", "Chase"). `NULL` if left blank. Not auto-detected from the file. |
 
 ### `transactions`
 
@@ -70,8 +73,9 @@ every statement.
 | `category`          | TEXT    | One of the fixed categories in [categories.ts](../src/lib/categories.ts) |
 | `category_locked`   | INTEGER | `1` once a human has manually corrected the category via the Transactions page; currently informational only (nothing reads it back yet) |
 | `hash`              | TEXT    | `sha256(date \| lowercased-trimmed description \| amount.toFixed(2))` — see [dedupe.ts](../src/lib/dedupe.ts). Used to skip re-inserting the same transaction on a repeat/overlapping upload. Indexed, not unique-constrained (checked in application code, not the schema) |
+| `institution`       | TEXT    | Denormalized copy of the parent statement's `institution` at insert time, so filtering/aggregating by institution needs no join. `NULL` if the statement had none. |
 
-Indexes: `date`, `category`, `statement_id`, `hash`.
+Indexes: `date`, `category`, `statement_id`, `hash`, `institution`.
 
 **Sign convention**: for a checking-account-style CSV, positive = deposit,
 negative = withdrawal, matching the source file. For a PDF detected as a credit
@@ -79,6 +83,15 @@ card statement (see [parsePdfStatement.ts](../src/lib/parsePdfStatement.ts)), th
 convention is inverted at parse time so it's consistent everywhere else: a charge
 is negative (an expense), and a payment/credit is positive and categorized as
 `Transfers` — never treated as income.
+
+**Statement boilerplate is filtered before it ever reaches this table.** Both
+parsers can mistake a balance snapshot or summary line (`Opening Balance`,
+`Closing Balance`, `Previous Balance`, `Total`, etc.) for a real transaction,
+since it has the same date-plus-amount shape — see
+[statementNoise.ts](../src/lib/statementNoise.ts). These are dropped at parse
+time and counted in `skippedRows`, not inserted and then filtered out later —
+there is no dashboard-side exclusion list, so a row that makes it into this
+table is always treated as real.
 
 ### `merchant_categories`
 
@@ -120,8 +133,19 @@ import of that merchant skips straight to step 2 instead of re-guessing.
 ## Migrations
 
 There is no migration framework — [`db.ts`](../src/lib/db.ts) runs
-`CREATE TABLE IF NOT EXISTS` for every table on every connection open, plus one
-hand-written, idempotent migration (`migrateHashColumn`) that adds the `hash`
-column and backfills it for databases created before duplicate detection
-existed. Any future schema change should follow the same pattern: an additive,
-idempotent function checked via `PRAGMA table_info`, called from `createDb()`.
+`CREATE TABLE IF NOT EXISTS` for every table on every connection open, plus
+hand-written, idempotent migrations checked via `PRAGMA table_info` and called
+from `createDb()`: `migrateHashColumn` (adds and backfills `hash`) and
+`migrateInstitutionColumn` (adds `institution` to both tables, no backfill —
+existing rows just get `NULL`, shown as "—" in the UI). Any future schema
+change should follow the same pattern.
+
+**Caveat for a long-running dev server**: `createDb()` and its migrations only
+run once, when the process's cached connection (`global.__spendwiseDb`) is
+first created — Next.js's dev-mode hot reload does *not* restart the process,
+so a schema change made while `npm run dev` has been running for a while won't
+run its migration until the process actually restarts. SQLite itself doesn't
+need a restart to see a schema change made by another connection on the same
+file (this is what let a `node -e` script apply the `institution` migration
+directly to a live database without stopping the running server) — it's
+specifically `createDb()`'s migration calls that need a fresh process to fire.

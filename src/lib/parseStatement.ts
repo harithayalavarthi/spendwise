@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import { isStatementNoise } from "./statementNoise";
 
 export interface ParsedTransaction {
   date: string; // ISO yyyy-mm-dd when parseable, otherwise the raw string
@@ -99,6 +100,10 @@ export function parseStatementCsv(csvText: string): ParseResult {
     const dateRaw = row[dateCol];
     const description = row[descCol]?.trim();
     if (!dateRaw || !description) {
+      skippedRows++;
+      continue;
+    }
+    if (isStatementNoise(description)) {
       skippedRows++;
       continue;
     }

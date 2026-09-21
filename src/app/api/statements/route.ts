@@ -5,7 +5,7 @@ export async function GET() {
   const db = getDb();
   const statements = db
     .prepare(
-      `SELECT id, filename, uploaded_at AS uploadedAt, transaction_count AS transactionCount
+      `SELECT id, filename, uploaded_at AS uploadedAt, transaction_count AS transactionCount, institution
        FROM statements ORDER BY uploaded_at DESC`
     )
     .all();

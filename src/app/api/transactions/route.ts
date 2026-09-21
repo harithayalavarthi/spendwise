@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   const db = getDb();
   const category = request.nextUrl.searchParams.get("category");
   const month = request.nextUrl.searchParams.get("month");
+  const institution = request.nextUrl.searchParams.get("institution");
 
   let where = ` WHERE 1=1`;
   const params: string[] = [];
@@ -20,17 +21,27 @@ export async function GET(request: NextRequest) {
     where += ` AND substr(date, 1, 7) = ?`;
     params.push(month);
   }
+  if (institution) {
+    where += ` AND institution = ?`;
+    params.push(institution);
+  }
 
   const total = db.prepare(`SELECT COUNT(*) AS count FROM transactions${where}`).get(...params) as {
     count: number;
   };
   const transactions = db
     .prepare(
-      `SELECT id, date, description, amount, category FROM transactions${where} ORDER BY date DESC, id DESC LIMIT ${MAX_RESULTS}`
+      `SELECT id, date, description, amount, category, institution FROM transactions${where} ORDER BY date DESC, id DESC LIMIT ${MAX_RESULTS}`
     )
     .all(...params);
+  const institutions = db
+    .prepare(
+      `SELECT DISTINCT institution FROM transactions WHERE institution IS NOT NULL ORDER BY institution`
+    )
+    .all()
+    .map((r) => (r as { institution: string }).institution);
 
-  return NextResponse.json({ transactions, total: total.count });
+  return NextResponse.json({ transactions, total: total.count, institutions });
 }
 
 export async function PATCH(request: NextRequest) {

@@ -9,6 +9,7 @@ interface Transaction {
   description: string;
   amount: number;
   category: string;
+  institution: string | null;
 }
 
 function formatCurrency(n: number) {
@@ -19,24 +20,28 @@ function formatCurrency(n: number) {
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [institutions, setInstitutions] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [institutionFilter, setInstitutionFilter] = useState("");
 
   useEffect(() => {
     let ignore = false;
     const params = new URLSearchParams();
     if (categoryFilter) params.set("category", categoryFilter);
+    if (institutionFilter) params.set("institution", institutionFilter);
     fetch(`/api/transactions?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         if (!ignore) {
           setTransactions(data.transactions ?? []);
           setTotal(data.total ?? 0);
+          setInstitutions(data.institutions ?? []);
         }
       });
     return () => {
       ignore = true;
     };
-  }, [categoryFilter]);
+  }, [categoryFilter, institutionFilter]);
 
   async function updateCategory(id: number, category: string) {
     setTransactions((prev) => (prev ?? []).map((t) => (t.id === id ? { ...t, category } : t)));
@@ -47,35 +52,54 @@ export default function TransactionsPage() {
     });
   }
 
+  const filterDescriptions = [
+    categoryFilter && `in ${categoryFilter}`,
+    institutionFilter && `from ${institutionFilter}`,
+  ].filter(Boolean);
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Transactions</h1>
           <p className="text-sm text-[var(--text-secondary)]">
             {transactions === null
               ? "Loading…"
-              : categoryFilter
-                ? `${total} transaction${total === 1 ? "" : "s"} in ${categoryFilter}`
-                : `${total} transaction${total === 1 ? "" : "s"} total`}
+              : `${total} transaction${total === 1 ? "" : "s"}${
+                  filterDescriptions.length ? ` ${filterDescriptions.join(" ")}` : " total"
+                }`}
             {transactions !== null && total > transactions.length
               ? ` (showing most recent ${transactions.length})`
               : ""}
             {" — "}fix a miscategorized transaction below, corrections apply immediately.
           </p>
         </div>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
-        >
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={institutionFilter}
+            onChange={(e) => setInstitutionFilter(e.target.value)}
+            className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+          >
+            <option value="">All institutions</option>
+            {institutions.map((inst) => (
+              <option key={inst} value={inst}>
+                {inst}
+              </option>
+            ))}
+          </select>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1.5 text-sm text-[var(--text-secondary)]"
+          >
+            <option value="">All categories</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {transactions === null ? (
@@ -89,6 +113,7 @@ export default function TransactionsPage() {
               <tr className="border-b border-[var(--border)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
                 <th className="px-4 py-2 font-medium">Date</th>
                 <th className="px-4 py-2 font-medium">Description</th>
+                <th className="px-4 py-2 font-medium">Institution</th>
                 <th className="px-4 py-2 font-medium text-right">Amount</th>
                 <th className="px-4 py-2 font-medium">Category</th>
               </tr>
@@ -98,6 +123,9 @@ export default function TransactionsPage() {
                 <tr key={t.id} className="border-b border-[var(--border)] last:border-0">
                   <td className="px-4 py-2 whitespace-nowrap text-[var(--text-secondary)]">{t.date}</td>
                   <td className="px-4 py-2 text-[var(--text-primary)]">{t.description}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-[var(--text-muted)]">
+                    {t.institution ?? "—"}
+                  </td>
                   <td
                     className={`px-4 py-2 text-right tabular-nums ${
                       t.amount < 0 ? "text-[var(--text-primary)]" : "text-[var(--status-good)]"

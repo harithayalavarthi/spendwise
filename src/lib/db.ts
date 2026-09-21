@@ -21,7 +21,8 @@ function createDb(): Database.Database {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       filename TEXT NOT NULL,
       uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
-      transaction_count INTEGER NOT NULL DEFAULT 0
+      transaction_count INTEGER NOT NULL DEFAULT 0,
+      institution TEXT
     );
 
     CREATE TABLE IF NOT EXISTS transactions (
@@ -32,12 +33,14 @@ function createDb(): Database.Database {
       amount REAL NOT NULL,
       category TEXT NOT NULL,
       category_locked INTEGER NOT NULL DEFAULT 0,
-      hash TEXT
+      hash TEXT,
+      institution TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
     CREATE INDEX IF NOT EXISTS idx_transactions_statement ON transactions(statement_id);
+    CREATE INDEX IF NOT EXISTS idx_transactions_institution ON transactions(institution);
 
     -- Learned merchant -> category mappings, so an LLM classification (or a
     -- user's manual correction) only has to happen once per merchant.
@@ -51,6 +54,7 @@ function createDb(): Database.Database {
 
   migrateHashColumn(db);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_transactions_hash ON transactions(hash);`);
+  migrateInstitutionColumn(db);
 
   return db;
 }
@@ -72,6 +76,20 @@ function migrateHashColumn(db: Database.Database) {
     }
   });
   backfill();
+}
+
+// Older databases created before the institution field was added won't have
+// these columns yet.
+function migrateInstitutionColumn(db: Database.Database) {
+  const statementCols = db.prepare(`PRAGMA table_info(statements)`).all() as Array<{ name: string }>;
+  if (!statementCols.some((c) => c.name === "institution")) {
+    db.exec(`ALTER TABLE statements ADD COLUMN institution TEXT`);
+  }
+
+  const txnCols = db.prepare(`PRAGMA table_info(transactions)`).all() as Array<{ name: string }>;
+  if (!txnCols.some((c) => c.name === "institution")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN institution TEXT`);
+  }
 }
 
 export function getDb(): Database.Database {

@@ -1,5 +1,6 @@
 import { PDFParse } from "pdf-parse";
 import { parseAmountToken, type ParseResult } from "./parseStatement";
+import { isStatementNoise } from "./statementNoise";
 
 const MONEY_TOKEN = String.raw`\(?-?\$?\d[\d,]*\.\d{2}\)?`;
 const TRAILING_ONE_AMOUNT_RE = new RegExp(`(${MONEY_TOKEN})\\s*$`);
@@ -165,7 +166,7 @@ function parseLine(
     description = description.slice(0, trailingBalance.index).trim();
   }
   description = description.replace(/\s+/g, " ");
-  if (!description) return null;
+  if (!description || isStatementNoise(description)) return null;
 
   const amount = isCreditCard
     ? (() => {
