@@ -164,3 +164,12 @@ cross-compiled) and publishes both installers to this repo's GitHub Release
 for that tag via `electron-builder --publish always`. Anyone visiting the
 repo's Releases page always finds installers matching the latest tag —
 there's no separate "upload the build somewhere" step to forget.
+
+**`releaseType: "release"` is set explicitly** in `package.json`'s `build.publish`
+config — `electron-builder`'s own default is `"draft"`, which creates the
+release but leaves it hidden from the public Releases page and from "latest"
+until someone manually publishes it in the GitHub UI. Found by watching the
+very first real release run create a draft (`gh release view v0.2.0` showed
+`draft: true`) rather than assuming the default matched what we wanted. Do
+not remove this setting — without it, every tag push silently produces a
+release nobody but a repo admin can see.
