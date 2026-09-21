@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import OllamaSetupBanner from "@/components/OllamaSetupBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-[var(--page-plane)] text-[var(--text-primary)]">
         <Nav />
-        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
+          <OllamaSetupBanner />
+          {children}
+        </main>
       </body>
     </html>
   );

@@ -1,12 +1,21 @@
 {
   "name": "spendwise",
   "version": "0.1.0",
+  "description": "Upload bank statements, auto-categorize transactions, and see spending analytics — locally, with no data leaving your machine.",
+  "author": "harithayalavarthi",
   "private": true,
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:prepare": "rm -rf .next/standalone dist-electron && next build && cp -r public .next/standalone/ && mkdir -p .next/standalone/.next && cp -r .next/static .next/standalone/.next/ && npm run electron:compile",
+    "electron:dev": "npm run electron:prepare && electron .",
+    "dist:mac": "npm run electron:prepare && electron-builder --mac",
+    "dist:win": "npm run electron:prepare && electron-builder --win",
+    "dist": "npm run electron:prepare && electron-builder --mac --win"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -18,6 +27,7 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^20",
@@ -25,6 +35,8 @@
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "^44.4.3",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
@@ -32,6 +44,38 @@
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "build": {
+    "appId": "com.spendwise.desktop",
+    "productName": "SpendWise",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "package.json",
+      "!node_modules/**/*"
+    ],
+    "afterPack": "build/afterPack.js",
+    "mac": {
+      "target": ["dmg"],
+      "category": "public.app-category.finance",
+      "icon": "build/icon.icns"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github"
+    }
   }
 }

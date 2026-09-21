@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Electron packaging output (see package.json's electron:* / dist:* scripts):
+    "dist-electron/**",
+    "release/**",
   ]),
 ]);
 

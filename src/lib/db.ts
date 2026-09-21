@@ -3,7 +3,14 @@ import path from "node:path";
 import fs from "node:fs";
 import { transactionHash } from "./dedupe";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// In the packaged Electron app, electron/main.ts sets SPENDWISE_DATA_DIR to
+// the OS user-data directory (e.g. ~/Library/Application Support/SpendWise on
+// macOS) before starting the server — there's no meaningful project directory
+// once this is running from an installed app bundle. Running from source
+// (npm run dev / next start) keeps the existing project-relative default.
+const DATA_DIR = process.env.SPENDWISE_DATA_DIR
+  ? path.resolve(process.env.SPENDWISE_DATA_DIR)
+  : path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "spendwise.db");
 
 declare global {

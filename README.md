@@ -4,14 +4,26 @@ Upload bank statements (CSV or PDF), auto-categorize transactions, and get spend
 analytics and suggestions to keep your finances on track. All data is stored locally
 in a SQLite database — nothing leaves your machine.
 
+## Download
+
+Grab the latest build for your OS from this repo's
+[**Releases**](../../releases/latest) page — `.dmg` for macOS, `.exe` for Windows.
+No Node, no `npm install`, nothing else to set up; the local LLM (optional, for
+smarter categorization) is offered as a guided one-time setup the first time you
+run it. See [docs/packaging.md](docs/packaging.md) for how this is built and how
+releases get published. **Both builds are currently unsigned** — see that doc's
+[Code signing](docs/packaging.md#code-signing-not-done) section for what that
+means when you open it.
+
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - SQLite via `better-sqlite3` (file at `data/spendwise.db`, gitignored — schema documented in [docs/database-schema.md](docs/database-schema.md))
 - `papaparse` for CSV parsing, `pdf-parse` for PDF text extraction, `recharts` for charts
 - [Ollama](https://ollama.com) running a local LLM, as a categorization fallback (optional but recommended)
+- Electron ([docs/packaging.md](docs/packaging.md)) for the packaged desktop app — the web app (`npm run dev`) and the desktop app are the same Next.js codebase, not a separate build
 
-## Getting started
+## Running from source
 
 ```bash
 npm install
@@ -19,7 +31,8 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000), then go to **Upload** and pick a
-statement from your bank.
+statement from your bank. (This is also how you'd build the desktop app yourself —
+see [docs/packaging.md](docs/packaging.md#building-locally).)
 
 ### Local LLM categorization (optional)
 

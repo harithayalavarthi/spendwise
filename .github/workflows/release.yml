@@ -1,0 +1,56 @@
+name: Release desktop app
+
+# Builds SpendWise for macOS (.dmg) and Windows (.exe) on their real OSes
+# (never cross-compiled) and publishes both straight to this repo's GitHub
+# Release for the pushed tag — that's what makes "latest" on the Releases
+# page always match the latest tagged code.
+#
+# Cut a release with:
+#   git tag v0.2.0 && git push origin v0.2.0
+#
+# workflow_dispatch lets you re-run a build manually (e.g. to retry a failed
+# platform) without pushing a new tag.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # electron-builder needs this to create/attach release assets
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      # windows-latest ships Git for Windows, which includes bash — running
+      # every step through it keeps package.json's scripts (rm -rf, cp -r,
+      # mkdir -p) identical across platforms instead of forking Windows- and
+      # POSIX-specific versions of each command.
+      - name: Install dependencies
+        shell: bash
+        run: npm ci
+
+      - name: Build and publish (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: npm run electron:prepare && npx electron-builder --mac --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: npm run electron:prepare && npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
