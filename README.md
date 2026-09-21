@@ -55,9 +55,12 @@ OLLAMA_HOST=http://localhost:11434
   already stored) are detected via a content hash and skipped automatically, so
   re-uploading a statement — or a second export that overlaps by a few days — won't
   double-count anything.
-- **Dashboard** (`/`): spending by category, income vs. expenses over time, and
-  rule-based suggestions (top category share, month-over-month spikes, savings
-  rate, recurring subscriptions).
+- **Dashboard** (`/`): spending by category, income vs. expenses over time,
+  monthly spending stacked by institution, a month explorer (pick a month, see
+  its category and institution breakdown), highest-spend days and a
+  day-of-week pattern, detected recurring payments (with missed-payment
+  flagging), and rule-based suggestions (top category share, month-over-month
+  spikes, savings rate, recurring subscriptions, missed recurring payments).
 - **Transactions** (`/transactions`): browse and manually re-categorize any
   transaction; filter by category or by financial institution.
 
@@ -108,6 +111,16 @@ OLLAMA_HOST=http://localhost:11434
   can mistake one for the other. These are recognized and dropped before they're
   ever inserted (`src/lib/statementNoise.ts`), not filtered out later on the
   dashboard, so a row that shows up in Transactions is always a real one.
+- **Recurring payment detection** (`src/lib/recurringPayments.ts`) groups
+  expenses by merchant, and flags a merchant as recurring if it has 3+ charges
+  at a consistent cadence (weekly/biweekly/monthly/quarterly/yearly, within a
+  tolerance) and a consistent amount (within 20%, or $3 for small charges).
+  "Missed" status compares the expected next charge date against the most
+  recent expense date anywhere in your data (not today's real calendar date —
+  your data's own currency is what matters), with a grace window scaled to
+  the cadence. It's a pattern match on 3+ data points, not a guarantee —
+  always check a flagged merchant against the real account before assuming
+  anything.
 - **Financial institution**: on upload, the app first tries to auto-detect the
   bank/card issuer from the statement's own text (`src/lib/detectInstitution.ts`
   — a curated list of common bank names, not a general classifier); typing a

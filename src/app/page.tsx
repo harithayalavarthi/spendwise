@@ -1,8 +1,22 @@
 import Link from "next/link";
 import { getAnalytics } from "@/lib/insights";
+import {
+  getAvailableMonths,
+  getDayOfWeekPattern,
+  getKnownInstitutions,
+  getMonthDetail,
+  getMonthlyInstitutionBreakdown,
+  getTopSpendingDays,
+} from "@/lib/monthlyInsights";
+import { detectRecurringPayments } from "@/lib/recurringPayments";
 import StatTile from "@/components/StatTile";
 import CategoryBarChart from "@/components/CategoryBarChart";
 import MonthlyTrendChart from "@/components/MonthlyTrendChart";
+import MonthlyInstitutionChart from "@/components/MonthlyInstitutionChart";
+import MonthExplorer from "@/components/MonthExplorer";
+import TopSpendingDays from "@/components/TopSpendingDays";
+import DayOfWeekChart from "@/components/DayOfWeekChart";
+import RecurringPayments from "@/components/RecurringPayments";
 import SuggestionsList from "@/components/SuggestionsList";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +45,15 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const institutionOrder = getKnownInstitutions();
+  const monthlyInstitutionRows = getMonthlyInstitutionBreakdown();
+  const months = getAvailableMonths()
+    .map((m) => getMonthDetail(m))
+    .filter((m): m is NonNullable<typeof m> => m !== null);
+  const topDays = getTopSpendingDays(8);
+  const dayOfWeek = getDayOfWeekPattern();
+  const recurringPayments = detectRecurringPayments();
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,6 +92,39 @@ export default function DashboardPage() {
           <MonthlyTrendChart data={analytics.monthlyTotals} />
         </section>
       </div>
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4">
+        <h2 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">
+          Monthly spending by institution
+        </h2>
+        <MonthlyInstitutionChart data={monthlyInstitutionRows} institutions={institutionOrder} />
+      </section>
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4">
+        <h2 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Month explorer</h2>
+        <MonthExplorer months={months} institutionOrder={institutionOrder} />
+      </section>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4">
+          <h2 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Highest-spend days</h2>
+          <TopSpendingDays days={topDays} />
+        </section>
+        <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4">
+          <h2 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Spending by day of week</h2>
+          <DayOfWeekChart data={dayOfWeek} />
+        </section>
+      </div>
+
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4">
+        <h2 className="mb-1 text-sm font-semibold text-[var(--text-primary)]">Recurring payments</h2>
+        <p className="mb-4 text-xs text-[var(--text-muted)]">
+          Detected from at least 3 similarly-timed, similarly-sized charges from the same merchant —
+          a pattern match, not a guarantee. Check anything flagged as missed against the actual
+          account before assuming it was cancelled.
+        </p>
+        <RecurringPayments payments={recurringPayments} />
+      </section>
 
       <section>
         <h2 className="mb-4 text-sm font-semibold text-[var(--text-primary)]">Suggestions</h2>

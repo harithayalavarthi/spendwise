@@ -115,6 +115,29 @@ correction — enforced by a conditional `ON CONFLICT` clause in
 a manual fix on the Transactions page permanent for that merchant across all
 future imports.
 
+## Analytics layer
+
+Nothing below adds tables or columns — everything is computed from
+`transactions` on every Dashboard request (`export const dynamic =
+"force-dynamic"`), no caching, no precomputed rollups. All queries follow the
+same convention as [insights.ts](../src/lib/insights.ts): `WHERE amount < 0
+AND category != 'Transfers'` for "spending," excluding statement noise (never
+inserted in the first place) and transfers (money moving between your own
+accounts, not spent).
+
+- [`insights.ts`](../src/lib/insights.ts) — totals, category breakdown,
+  monthly income/expense trend, rule-based suggestions.
+- [`monthlyInsights.ts`](../src/lib/monthlyInsights.ts) — month × institution
+  breakdown, per-month drill-down (category + institution split for one
+  month), highest-spend days, day-of-week pattern.
+- [`recurringPayments.ts`](../src/lib/recurringPayments.ts) — merchant-level
+  cadence + amount-consistency detection; see the README for the exact
+  thresholds. Its "as of" reference date is the most recent date among
+  *matching* rows (`amount < 0 AND category != 'Transfers'`) — a transaction
+  that's miscategorized or mis-signed (see the Scotiabank sign-convention
+  issue under discussion with the user as of this writing) is invisible to
+  this query, which can silently understate how overdue a missed payment is.
+
 ## Categorization pipeline (how `category` gets set)
 
 Every transaction is categorized once, at upload time, by

@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { detectRecurringPayments } from "./recurringPayments";
 
 export interface CategoryTotal {
   category: string;
@@ -180,6 +181,17 @@ function buildSuggestions(params: {
       title: "Review recurring subscriptions",
       detail: `You spent $${subs.total.toFixed(2)} across ${subs.count} subscription charge${subs.count === 1 ? "" : "s"}. Cancel anything you no longer use.`,
       severity: "info",
+    });
+  }
+
+  // Missed recurring payments (full detail lives in the Recurring payments
+  // section — this just surfaces the actionable ones here too).
+  const missed = detectRecurringPayments().filter((p) => p.status === "missed");
+  for (const p of missed.slice(0, 3)) {
+    suggestions.push({
+      title: `${p.description} may have been missed`,
+      detail: `Normally charges ~$${p.averageAmount.toFixed(2)} every ${p.cadence === "monthly" ? "month" : p.cadence}, last seen ${p.lastDate}, expected around ${p.expectedNextDate} — ${p.daysOverdue} day${p.daysOverdue === 1 ? "" : "s"} overdue with no new charge. Could be a cancellation, a payment failure, or just not in your uploaded statements yet.`,
+      severity: "warning",
     });
   }
 
