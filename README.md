@@ -7,7 +7,7 @@ in a SQLite database — nothing leaves your machine.
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
-- SQLite via `better-sqlite3` (file at `data/spendwise.db`, gitignored)
+- SQLite via `better-sqlite3` (file at `data/spendwise.db`, gitignored — schema documented in [docs/database-schema.md](docs/database-schema.md))
 - `papaparse` for CSV parsing, `pdf-parse` for PDF text extraction, `recharts` for charts
 - [Ollama](https://ollama.com) running a local LLM, as a categorization fallback (optional but recommended)
 

@@ -18,6 +18,7 @@ function formatCurrency(n: number) {
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState("");
 
   useEffect(() => {
@@ -27,7 +28,10 @@ export default function TransactionsPage() {
     fetch(`/api/transactions?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-        if (!ignore) setTransactions(data.transactions ?? []);
+        if (!ignore) {
+          setTransactions(data.transactions ?? []);
+          setTotal(data.total ?? 0);
+        }
       });
     return () => {
       ignore = true;
@@ -49,7 +53,15 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-xl font-semibold">Transactions</h1>
           <p className="text-sm text-[var(--text-secondary)]">
-            Fix a miscategorized transaction below — corrections apply immediately.
+            {transactions === null
+              ? "Loading…"
+              : categoryFilter
+                ? `${total} transaction${total === 1 ? "" : "s"} in ${categoryFilter}`
+                : `${total} transaction${total === 1 ? "" : "s"} total`}
+            {transactions !== null && total > transactions.length
+              ? ` (showing most recent ${transactions.length})`
+              : ""}
+            {" — "}fix a miscategorized transaction below, corrections apply immediately.
           </p>
         </div>
         <select

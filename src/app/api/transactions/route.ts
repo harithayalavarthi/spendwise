@@ -3,25 +3,34 @@ import { getDb } from "@/lib/db";
 import { CATEGORIES, type Category } from "@/lib/categories";
 import { getMerchantKey, saveMerchantCategory } from "@/lib/merchantCache";
 
+const MAX_RESULTS = 500;
+
 export async function GET(request: NextRequest) {
   const db = getDb();
   const category = request.nextUrl.searchParams.get("category");
   const month = request.nextUrl.searchParams.get("month");
 
-  let query = `SELECT id, date, description, amount, category FROM transactions WHERE 1=1`;
+  let where = ` WHERE 1=1`;
   const params: string[] = [];
   if (category) {
-    query += ` AND category = ?`;
+    where += ` AND category = ?`;
     params.push(category);
   }
   if (month) {
-    query += ` AND substr(date, 1, 7) = ?`;
+    where += ` AND substr(date, 1, 7) = ?`;
     params.push(month);
   }
-  query += ` ORDER BY date DESC, id DESC LIMIT 500`;
 
-  const transactions = db.prepare(query).all(...params);
-  return NextResponse.json({ transactions });
+  const total = db.prepare(`SELECT COUNT(*) AS count FROM transactions${where}`).get(...params) as {
+    count: number;
+  };
+  const transactions = db
+    .prepare(
+      `SELECT id, date, description, amount, category FROM transactions${where} ORDER BY date DESC, id DESC LIMIT ${MAX_RESULTS}`
+    )
+    .all(...params);
+
+  return NextResponse.json({ transactions, total: total.count });
 }
 
 export async function PATCH(request: NextRequest) {
