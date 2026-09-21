@@ -1,6 +1,6 @@
 {
   "name": "spendwise",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Upload bank statements, auto-categorize transactions, and see spending analytics — locally, with no data leaving your machine.",
   "author": "harithayalavarthi",
   "private": true,
