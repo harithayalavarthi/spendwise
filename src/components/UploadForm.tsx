@@ -9,6 +9,7 @@ interface UploadResult {
   skippedRows: number;
   warning?: string;
   categoryCounts: Record<string, number>;
+  llmCategorized: number;
 }
 
 export default function UploadForm() {
@@ -67,7 +68,7 @@ export default function UploadForm() {
           disabled={status === "uploading"}
           className="w-fit rounded-md bg-[var(--series-1)] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
-          {status === "uploading" ? "Uploading…" : "Upload & categorize"}
+          {status === "uploading" ? "Uploading & categorizing…" : "Upload & categorize"}
         </button>
       </form>
 
@@ -86,6 +87,13 @@ export default function UploadForm() {
               : ""}
             {result.skippedRows > 0 ? ` (${result.skippedRows} unrecognized rows skipped)` : ""}
           </p>
+          {result.llmCategorized > 0 && (
+            <p className="mt-1 text-[var(--text-secondary)]">
+              {result.llmCategorized} transaction{result.llmCategorized === 1 ? "" : "s"} categorized by
+              the local LLM (merchants not covered by keyword rules) — worth a quick check on the
+              Transactions page.
+            </p>
+          )}
           {result.warning && (
             <p className="mt-1 text-[var(--status-warning)]">{result.warning}</p>
           )}

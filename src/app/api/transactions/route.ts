@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { CATEGORIES } from "@/lib/categories";
+import { CATEGORIES, type Category } from "@/lib/categories";
+import { getMerchantKey, saveMerchantCategory } from "@/lib/merchantCache";
 
 export async function GET(request: NextRequest) {
   const db = getDb();
@@ -35,9 +36,21 @@ export async function PATCH(request: NextRequest) {
   }
 
   const db = getDb();
+  const existing = db.prepare(`SELECT description FROM transactions WHERE id = ?`).get(id) as
+    | { description: string }
+    | undefined;
+
   db.prepare(`UPDATE transactions SET category = ?, category_locked = 1 WHERE id = ?`).run(
     category,
     id
   );
+
+  // Teach the merchant cache from this correction so future imports of the
+  // same merchant (via keyword miss -> LLM/cache fallback) get it right
+  // immediately, without waiting on another LLM call.
+  if (existing) {
+    saveMerchantCategory(getMerchantKey(existing.description), category as Category, "user");
+  }
+
   return NextResponse.json({ ok: true });
 }

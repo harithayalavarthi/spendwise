@@ -231,12 +231,19 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/[.'-]/g, "");
 }
 
-export function categorize(description: string, amount: number): Category {
+// Pure, synchronous, free — the first pass every transaction goes through.
+// Returns null (rather than falling back) so callers can layer smarter
+// fallbacks (an LLM, a merchant cache) on top before giving up.
+export function categorizeByKeyword(description: string): Category | null {
   const text = normalize(description);
   for (const rule of RULES) {
     if (rule.keywords.some((kw) => text.includes(normalize(kw)))) {
       return rule.category;
     }
   }
-  return amount > 0 ? "Income" : "Other";
+  return null;
+}
+
+export function categorize(description: string, amount: number): Category {
+  return categorizeByKeyword(description) ?? (amount > 0 ? "Income" : "Other");
 }

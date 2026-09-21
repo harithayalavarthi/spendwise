@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { parseStatementCsv } from "@/lib/parseStatement";
 import { parseStatementPdf } from "@/lib/parsePdfStatement";
-import { categorize } from "@/lib/categories";
+import { categorizeTransaction } from "@/lib/categorizeTransaction";
 import { transactionHash } from "@/lib/dedupe";
 
 export async function POST(request: NextRequest) {
@@ -36,6 +36,32 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb();
+  const findExisting = db.prepare(`SELECT 1 FROM transactions WHERE hash = ? LIMIT 1`);
+
+  // Categorization can call out to the local LLM (async I/O), which
+  // better-sqlite3's synchronous transactions can't wrap — so resolve every
+  // transaction's category first, then insert everything in one fast,
+  // synchronous transaction below.
+  const categoryCounts: Record<string, number> = {};
+  const sourceCounts: Record<string, number> = {};
+  let duplicates = 0;
+  const seenInThisUpload = new Set<string>();
+  const toInsert: Array<{ date: string; description: string; amount: number; category: string; hash: string }> = [];
+
+  for (const t of transactions) {
+    const hash = transactionHash(t.date, t.description, t.amount);
+    if (seenInThisUpload.has(hash) || findExisting.get(hash)) {
+      duplicates++;
+      continue;
+    }
+    seenInThisUpload.add(hash);
+
+    const { category, source } = await categorizeTransaction(t.description, t.amount);
+    categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+    sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
+    toInsert.push({ date: t.date, description: t.description, amount: t.amount, category, hash });
+  }
+
   const insertStatement = db.prepare(
     `INSERT INTO statements (filename, transaction_count) VALUES (?, ?)`
   );
@@ -43,27 +69,8 @@ export async function POST(request: NextRequest) {
     `INSERT INTO transactions (statement_id, date, description, amount, category, hash)
      VALUES (?, ?, ?, ?, ?, ?)`
   );
-  const findExisting = db.prepare(`SELECT 1 FROM transactions WHERE hash = ? LIMIT 1`);
-
-  const categoryCounts: Record<string, number> = {};
-  let duplicates = 0;
 
   const statementId = db.transaction(() => {
-    const seenInThisUpload = new Set<string>();
-    const toInsert: Array<{ date: string; description: string; amount: number; category: string; hash: string }> = [];
-
-    for (const t of transactions) {
-      const hash = transactionHash(t.date, t.description, t.amount);
-      if (seenInThisUpload.has(hash) || findExisting.get(hash)) {
-        duplicates++;
-        continue;
-      }
-      seenInThisUpload.add(hash);
-      const category = categorize(t.description, t.amount);
-      categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
-      toInsert.push({ date: t.date, description: t.description, amount: t.amount, category, hash });
-    }
-
     const info = insertStatement.run(file.name, toInsert.length);
     const id = info.lastInsertRowid as number;
     for (const t of toInsert) {
@@ -81,5 +88,6 @@ export async function POST(request: NextRequest) {
     skippedRows,
     warning,
     categoryCounts,
+    llmCategorized: sourceCounts["llm"] ?? 0,
   });
 }

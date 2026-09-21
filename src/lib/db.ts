@@ -38,6 +38,15 @@ function createDb(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
     CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
     CREATE INDEX IF NOT EXISTS idx_transactions_statement ON transactions(statement_id);
+
+    -- Learned merchant -> category mappings, so an LLM classification (or a
+    -- user's manual correction) only has to happen once per merchant.
+    CREATE TABLE IF NOT EXISTS merchant_categories (
+      merchant_key TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      source TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   migrateHashColumn(db);
