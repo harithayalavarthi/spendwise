@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const institution = (formData.get("institution") as string | null)?.trim() || null;
+  const userInstitution = (formData.get("institution") as string | null)?.trim() || null;
 
   const name = file.name.toLowerCase();
   const isCsv = name.endsWith(".csv");
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { transactions, skippedRows, warning } = isCsv
+  const { transactions, skippedRows, warning, detectedInstitution } = isCsv
     ? parseStatementCsv(await file.text())
     : await parseStatementPdf(Buffer.from(await file.arrayBuffer()));
 
@@ -36,6 +36,11 @@ export async function POST(request: NextRequest) {
       { status: 422 }
     );
   }
+
+  // A user-typed institution always wins; otherwise fall back to whatever was
+  // detected from the statement's own text (bank name printed in the PDF/CSV).
+  const institution = userInstitution || detectedInstitution || null;
+  const institutionSource = userInstitution ? "user" : detectedInstitution ? "detected" : null;
 
   const db = getDb();
   const findExisting = db.prepare(`SELECT 1 FROM transactions WHERE hash = ? LIMIT 1`);
@@ -96,5 +101,7 @@ export async function POST(request: NextRequest) {
     llmCategorized: sourceCounts["llm"] ?? 0,
     totalTransactions: totals.transactions,
     totalStatements: totals.statements,
+    institution,
+    institutionSource,
   });
 }

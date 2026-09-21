@@ -12,6 +12,8 @@ interface UploadResult {
   llmCategorized: number;
   totalTransactions: number;
   totalStatements: number;
+  institution: string | null;
+  institutionSource: "user" | "detected" | null;
 }
 
 export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
@@ -70,14 +72,17 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            Financial institution <span className="font-normal text-[var(--text-muted)]">(optional)</span>
+            Financial institution{" "}
+            <span className="font-normal text-[var(--text-muted)]">
+              (optional — leave blank to auto-detect from the statement when possible)
+            </span>
           </span>
           <input
             type="text"
             list="institution-suggestions"
             value={institution}
             onChange={(e) => setInstitution(e.target.value)}
-            placeholder="e.g. TD Bank, Chase, RBC"
+            placeholder="e.g. TD Bank, Chase, RBC — auto-detected if left blank"
             className="rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
           />
           <datalist id="institution-suggestions">
@@ -121,6 +126,13 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
             Nothing was overwritten — you now have {result.totalTransactions} transaction
             {result.totalTransactions === 1 ? "" : "s"} stored across {result.totalStatements}{" "}
             statement{result.totalStatements === 1 ? "" : "s"} in total.
+          </p>
+          <p className="mt-1 text-[var(--text-secondary)]">
+            {result.institutionSource === "user" && `Institution: ${result.institution} (as entered).`}
+            {result.institutionSource === "detected" &&
+              `Institution: ${result.institution} (auto-detected from the statement — edit it on the Statements list below if that's wrong).`}
+            {result.institutionSource === null &&
+              "Couldn't detect an institution from this statement — you can set one later on the Statements list below."}
           </p>
           {result.llmCategorized > 0 && (
             <p className="mt-1 text-[var(--text-secondary)]">

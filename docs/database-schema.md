@@ -54,7 +54,7 @@ uploads never delete or modify existing rows.
 | `filename`           | TEXT    | Original uploaded filename, as-is                              |
 | `uploaded_at`        | TEXT    | `datetime('now')` at insert time (UTC)                        |
 | `transaction_count`  | INTEGER | Count of *newly inserted* transactions from this upload (excludes duplicates skipped from this same file) |
-| `institution`        | TEXT    | Free-text label the user optionally types in on the Upload page (e.g. "TD Bank", "Chase"). `NULL` if left blank. Not auto-detected from the file. |
+| `institution`        | TEXT    | The financial institution for this statement. Resolution order: a user-typed value on the Upload page always wins; otherwise [`detectInstitution()`](../src/lib/detectInstitution.ts) scans the statement's own text for a known bank/issuer name; `NULL` if neither finds one. Editable at any time afterward via the Statements list (`PATCH /api/statements`), which cascades to every transaction under it. |
 
 ### `transactions`
 

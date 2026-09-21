@@ -108,9 +108,13 @@ OLLAMA_HOST=http://localhost:11434
   can mistake one for the other. These are recognized and dropped before they're
   ever inserted (`src/lib/statementNoise.ts`), not filtered out later on the
   dashboard, so a row that shows up in Transactions is always a real one.
-- **Financial institution** is an optional free-text field you can fill in on the
-  Upload page per statement (with autocomplete suggestions for a few common
-  banks) — it's not auto-detected from the file. It's stored on every
-  transaction from that statement, so you can filter the Transactions page by
-  institution for FI-level analysis. Statements uploaded before this existed
-  show as "—" (no institution) until re-uploaded with one set.
+- **Financial institution**: on upload, the app first tries to auto-detect the
+  bank/card issuer from the statement's own text (`src/lib/detectInstitution.ts`
+  — a curated list of common bank names, not a general classifier); typing a
+  value into the optional field on the Upload page always overrides whatever
+  would've been detected. Either way it's stored on every transaction from that
+  statement, so you can filter the Transactions page by institution for
+  FI-level analysis. If neither finds one, it's left unset — click the
+  "+ institution" badge on the Statements list (Upload page) to set or correct
+  it at any time; the change cascades to every transaction under that
+  statement immediately.

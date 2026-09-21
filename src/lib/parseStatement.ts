@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import { isStatementNoise } from "./statementNoise";
+import { detectInstitution } from "./detectInstitution";
 
 export interface ParsedTransaction {
   date: string; // ISO yyyy-mm-dd when parseable, otherwise the raw string
@@ -11,6 +12,7 @@ export interface ParseResult {
   transactions: ParsedTransaction[];
   skippedRows: number;
   warning?: string;
+  detectedInstitution?: string | null;
 }
 
 const DATE_HEADERS = ["date", "transaction date", "posted date", "posting date", "trans date"];
@@ -131,5 +133,5 @@ export function parseStatementCsv(csvText: string): ParseResult {
     });
   }
 
-  return { transactions, skippedRows };
+  return { transactions, skippedRows, detectedInstitution: detectInstitution(csvText) };
 }
