@@ -20,7 +20,38 @@ permissions:
   contents: write # electron-builder needs this to create/attach release assets
 
 jobs:
+  # Creates the GitHub Release once, up front, before either platform build
+  # starts. Without this, the macOS and Windows jobs each ask electron-builder
+  # to "find or create" a release for the tag independently and in parallel —
+  # GitHub only enforces one release per tag once a release is *published*,
+  # so two draft releases can (and did, on the very first real run here) get
+  # created for the same tag, each holding only one platform's installer.
+  # A release that already exists when the matrix jobs start is unambiguous:
+  # both jobs find the same one and just add their own assets to it.
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Create release if it doesn't exist
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, nothing to do."
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$VERSION" --generate-notes
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   release:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -33,10 +64,11 @@ jobs:
         with:
           node-version: lts/*
 
-      # windows-latest ships Git for Windows, which includes bash — running
-      # every step through it keeps package.json's scripts (rm -rf, cp -r,
-      # mkdir -p) identical across platforms instead of forking Windows- and
-      # POSIX-specific versions of each command.
+      # windows-latest ships Git for Windows, which includes bash — kept
+      # consistent across platforms even though electron:prepare itself is
+      # now a plain Node script (scripts/electron-prepare.js), not a shell
+      # chain, after a real Windows CI run showed npm's nested script
+      # invocations don't reliably stay in Git Bash.
       - name: Install dependencies
         shell: bash
         run: npm ci

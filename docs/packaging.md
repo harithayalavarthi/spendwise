@@ -171,6 +171,20 @@ for that tag via `electron-builder --publish always`. Anyone visiting the
 repo's Releases page always finds installers matching the latest tag —
 there's no separate "upload the build somewhere" step to forget.
 
+**A `create-release` job runs first and creates the release before either
+platform builds**, and both platform jobs `needs: create-release`. This
+exists because of a real incident on the first `v0.2.0` release: the macOS
+and Windows jobs ran in parallel, and each independently asked
+`electron-builder` to find-or-create a release for the tag — GitHub only
+enforces one release per tag once a release is *published*, so the two jobs
+raced and created **two separate draft releases** both tagged `v0.2.0`, each
+holding only its own platform's installer. Neither draft was visible on the
+public Releases page, and fixing it required manually merging both drafts'
+assets into one release and publishing it via the API. With `create-release`
+creating (or confirming) the release up front, both matrix jobs always find
+the same already-existing release and just add their own assets to it —
+no ambiguity, no race.
+
 **`releaseType: "release"` is set explicitly** in `package.json`'s `build.publish`
 config — `electron-builder`'s own default is `"draft"`, which creates the
 release but leaves it hidden from the public Releases page and from "latest"
