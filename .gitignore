@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local financial data - never commit this
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# local dev tooling config (machine-specific paths)
+/.claude/
