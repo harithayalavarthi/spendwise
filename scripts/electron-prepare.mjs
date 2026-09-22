@@ -6,11 +6,11 @@
 // GitHub Actions step was configured with `shell: bash`. Node's own
 // child_process/fs APIs sidestep the question of which shell npm picks
 // entirely, on every platform.
-const { execSync } = require("node:child_process");
-const fs = require("node:fs");
-const path = require("node:path");
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
-const root = path.join(__dirname, "..");
+const root = path.join(import.meta.dirname, "..");
 const standalone = path.join(root, ".next", "standalone");
 
 function run(cmd) {
