@@ -4,6 +4,7 @@ import { parseStatementCsv } from "@/lib/parseStatement";
 import { parseStatementPdf } from "@/lib/parsePdfStatement";
 import { categorizeTransaction } from "@/lib/categorizeTransaction";
 import { transactionHash } from "@/lib/dedupe";
+import { logInfo } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
@@ -26,9 +27,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  logInfo("upload", `Parsing "${file.name}" (${isCsv ? "csv" : "pdf"}, ${file.size} bytes)`);
+
   const { transactions, skippedRows, warning, detectedInstitution } = isCsv
     ? parseStatementCsv(await file.text())
     : await parseStatementPdf(Buffer.from(await file.arrayBuffer()));
+
+  logInfo(
+    "upload",
+    `Parsed ${transactions.length} transaction(s), skipped ${skippedRows} row(s)` +
+      (detectedInstitution ? `, detected institution "${detectedInstitution}"` : "") +
+      (warning ? ` — warning: ${warning}` : "")
+  );
 
   if (transactions.length === 0) {
     return NextResponse.json(
@@ -90,6 +100,11 @@ export async function POST(request: NextRequest) {
   const totals = db
     .prepare(`SELECT COUNT(*) AS transactions, (SELECT COUNT(*) FROM statements) AS statements FROM transactions`)
     .get() as { transactions: number; statements: number };
+
+  logInfo(
+    "upload",
+    `Imported ${imported} (${duplicates} duplicate(s) skipped) — categorized by: ${JSON.stringify(sourceCounts)}, categories: ${JSON.stringify(categoryCounts)}`
+  );
 
   return NextResponse.json({
     statementId,

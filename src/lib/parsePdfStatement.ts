@@ -2,6 +2,7 @@ import { PDFParse } from "pdf-parse";
 import { parseAmountToken, type ParseResult } from "./parseStatement";
 import { isStatementNoise } from "./statementNoise";
 import { detectInstitution } from "./detectInstitution";
+import { logWarn } from "./logger";
 
 const MONEY_TOKEN = String.raw`\(?-?\$?\d[\d,]*\.\d{2}\)?`;
 const TRAILING_ONE_AMOUNT_RE = new RegExp(`(${MONEY_TOKEN})\\s*$`);
@@ -215,6 +216,7 @@ export async function parseStatementPdf(buffer: Buffer): Promise<ParseResult> {
       transactions.push(parsed);
     } else {
       skippedRows++;
+      logWarn("pdf-parse", `Line starts with a date but no amount was found — skipped: "${line.trim()}"`);
     }
   }
 

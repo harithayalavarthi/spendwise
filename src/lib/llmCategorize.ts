@@ -1,4 +1,5 @@
 import { CATEGORIES, type Category } from "./categories";
+import { logInfo, logWarn } from "./logger";
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST ?? "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen2.5:7b";
@@ -50,21 +51,37 @@ export async function categorizeWithOllama(description: string): Promise<Categor
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logWarn("llm", `Ollama returned ${res.status} for "${description}" — falling back`, await res.text().catch(() => ""));
+      return null;
+    }
 
     const data = (await res.json()) as { message?: { content?: string } };
     const content = data.message?.content;
-    if (!content) return null;
+    if (!content) {
+      logWarn("llm", `Ollama response had no message content for "${description}" — falling back`);
+      return null;
+    }
 
     const parsed = JSON.parse(content) as { category?: string };
     const category = parsed.category;
     if (category && (CATEGORIES as readonly string[]).includes(category)) {
+      logInfo("llm", `"${description}" -> ${category}`);
       return category as Category;
     }
+    logWarn("llm", `Ollama returned an unrecognized category "${category}" for "${description}" — falling back`);
     return null;
-  } catch {
+  } catch (err) {
     // Ollama not running, model not pulled, timeout, malformed response —
-    // any of these just means "no LLM opinion", not a failed upload.
+    // any of these just means "no LLM opinion", not a failed upload — but
+    // log which one it was, since they used to be indistinguishable.
+    const reason =
+      err instanceof Error && err.name === "AbortError"
+        ? `timed out after ${TIMEOUT_MS}ms`
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    logWarn("llm", `Ollama call failed for "${description}" (${reason}) — falling back`);
     return null;
   } finally {
     clearTimeout(timeout);
