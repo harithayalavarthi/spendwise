@@ -47,6 +47,24 @@ without a place recording that it exists. Set it locally via `.env.local`:
 FEATURE_BANK_SYNC=true
 ```
 
+### Naming convention
+
+- **The flag name itself** (what goes in `FLAG_NAMES` and in
+  `isFeatureEnabled("...")`) is `camelCase`, matching this codebase's normal
+  TypeScript identifier style — `bankSync`, `pdfMultiPage`, not `bank_sync`
+  or `BANK_SYNC`.
+- **Name it after the capability**, not the ticket, the date, or "test":
+  `bankSync` is a name; `sept2026Feature` or `newThing` is not. Someone
+  reading `isFeatureEnabled("bankSync")` six months from now should be able
+  to tell what it gates without digging up the PR that added it.
+- **The env var is derived automatically** — `isFeatureEnabled` uppercases
+  the name and prefixes it with `FEATURE_` (`bankSync` → `FEATURE_BANK_SYNC`).
+  Never hand-roll a second env var for the same flag under a different name.
+- **Comment each `FLAG_NAMES` entry with the date it was added**, e.g.
+  `"bankSync", // added 2026-09-22` — makes it obvious at a glance which
+  flags have been sitting around long enough to ask whether they're still
+  needed.
+
 **Remove the flag once the feature has fully shipped** — delete the guard,
 delete the entry in `FLAG_NAMES`, delete the env var wherever it's set. A
 flag nobody ever turns off is dead code with extra steps.
