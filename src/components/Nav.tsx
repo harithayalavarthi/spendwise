@@ -3,14 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
+const BASE_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/upload", label: "Upload" },
   { href: "/transactions", label: "Transactions" },
 ];
 
-export default function Nav() {
+// bankSync is a server-only env var (see src/lib/featureFlags.ts) — Nav is a
+// client component (needs usePathname), so the flag is computed server-side
+// in layout.tsx and passed down, rather than read here directly.
+export default function Nav({ bankSyncEnabled }: { bankSyncEnabled: boolean }) {
   const pathname = usePathname();
+  const links = bankSyncEnabled ? [...BASE_LINKS, { href: "/accounts", label: "Accounts" }] : BASE_LINKS;
 
   return (
     <header className="border-b border-[var(--border)] bg-[var(--surface-1)]">
@@ -19,7 +23,7 @@ export default function Nav() {
           SpendWise
         </span>
         <nav className="flex gap-1">
-          {LINKS.map((link) => {
+          {links.map((link) => {
             const active = pathname === link.href;
             return (
               <Link

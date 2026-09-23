@@ -23,8 +23,10 @@
     "next": "16.3.5",
     "papaparse": "^5.7.0",
     "pdf-parse": "^2.4.5",
+    "plaid": "^47.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "react-plaid-link": "^5.0.0",
     "recharts": "^3.10.1"
   },
   "devDependencies": {
@@ -62,12 +64,16 @@
     ],
     "afterPack": "build/afterPack.js",
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.finance",
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "build/icon.ico"
     },
     "nsis": {

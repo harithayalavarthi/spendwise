@@ -2,7 +2,10 @@
 
 Upload bank statements (CSV or PDF), auto-categorize transactions, and get spending
 analytics and suggestions to keep your finances on track. All data is stored locally
-in a SQLite database — nothing leaves your machine.
+in a SQLite database — nothing leaves your machine by default. An optional,
+off-by-default feature (`bankSync`) can connect a bank directly via Plaid instead of
+uploading statements by hand — see [docs/plaid-bank-sync.md](docs/plaid-bank-sync.md)
+for what that changes about this app's privacy story before enabling it.
 
 ## Download
 
@@ -76,6 +79,11 @@ OLLAMA_HOST=http://localhost:11434
   spikes, savings rate, recurring subscriptions, missed recurring payments).
 - **Transactions** (`/transactions`): browse and manually re-categorize any
   transaction; filter by category or by financial institution.
+- **Accounts** (`/accounts`, only shown when `FEATURE_BANK_SYNC=true`): connect a
+  bank directly via Plaid instead of uploading statements by hand — see
+  [docs/plaid-bank-sync.md](docs/plaid-bank-sync.md) for setup and the privacy
+  tradeoff involved. Off by default; the rest of the app behaves identically
+  whether or not this is enabled.
 
 ## Notes
 

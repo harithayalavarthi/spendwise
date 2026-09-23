@@ -57,11 +57,28 @@ function createDb(): Database.Database {
       source TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- A connected bank (via Plaid) is modeled as a statement whose
+    -- transactions keep arriving over time instead of a one-time upload —
+    -- see docs/plaid-bank-sync.md. Deleting the statement disconnects the
+    -- bank and removes its transactions via the existing FK cascade below,
+    -- which is the correct behavior for both "delete an upload" and
+    -- "disconnect a bank."
+    CREATE TABLE IF NOT EXISTS plaid_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id TEXT NOT NULL UNIQUE,
+      statement_id INTEGER NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
+      access_token_encrypted TEXT NOT NULL,
+      cursor TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_synced_at TEXT
+    );
   `);
 
   migrateHashColumn(db);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_transactions_hash ON transactions(hash);`);
   migrateInstitutionColumn(db);
+  migratePlaidColumns(db);
 
   return db;
 }
@@ -96,6 +113,27 @@ function migrateInstitutionColumn(db: Database.Database) {
   const txnCols = db.prepare(`PRAGMA table_info(transactions)`).all() as Array<{ name: string }>;
   if (!txnCols.some((c) => c.name === "institution")) {
     db.exec(`ALTER TABLE transactions ADD COLUMN institution TEXT`);
+  }
+}
+
+// Older databases created before Plaid sync was added won't have these
+// columns yet: `statements.source` distinguishes an upload from a synced
+// connection, and `transactions.plaid_transaction_id` is Plaid's own stable
+// id, used (alongside the existing content hash) to apply its
+// added/modified/removed sync changesets correctly instead of just
+// inserting everything as new.
+function migratePlaidColumns(db: Database.Database) {
+  const statementCols = db.prepare(`PRAGMA table_info(statements)`).all() as Array<{ name: string }>;
+  if (!statementCols.some((c) => c.name === "source")) {
+    db.exec(`ALTER TABLE statements ADD COLUMN source TEXT NOT NULL DEFAULT 'upload'`);
+  }
+
+  const txnCols = db.prepare(`PRAGMA table_info(transactions)`).all() as Array<{ name: string }>;
+  if (!txnCols.some((c) => c.name === "plaid_transaction_id")) {
+    db.exec(`ALTER TABLE transactions ADD COLUMN plaid_transaction_id TEXT`);
+    db.exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_plaid_id ON transactions(plaid_transaction_id) WHERE plaid_transaction_id IS NOT NULL`
+    );
   }
 }
 

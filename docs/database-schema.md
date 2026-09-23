@@ -10,6 +10,7 @@ this file is the entire data layer.
 ```mermaid
 erDiagram
     STATEMENTS ||--o{ TRANSACTIONS : "contains"
+    STATEMENTS ||--o| PLAID_ITEMS : "one live connection, if source='plaid'"
     TRANSACTIONS }o..o| MERCHANT_CATEGORIES : "looked up by merchant_key (no FK)"
 
     STATEMENTS {
@@ -18,6 +19,7 @@ erDiagram
         TEXT uploaded_at
         INTEGER transaction_count
         TEXT institution
+        TEXT source
     }
 
     TRANSACTIONS {
@@ -30,6 +32,7 @@ erDiagram
         INTEGER category_locked
         TEXT hash
         TEXT institution
+        TEXT plaid_transaction_id
     }
 
     MERCHANT_CATEGORIES {
@@ -37,6 +40,16 @@ erDiagram
         TEXT category
         TEXT source
         TEXT updated_at
+    }
+
+    PLAID_ITEMS {
+        INTEGER id PK
+        TEXT item_id
+        INTEGER statement_id FK
+        TEXT access_token_encrypted
+        TEXT cursor
+        TEXT created_at
+        TEXT last_synced_at
     }
 ```
 
@@ -55,6 +68,7 @@ uploads never delete or modify existing rows.
 | `uploaded_at`        | TEXT    | `datetime('now')` at insert time (UTC)                        |
 | `transaction_count`  | INTEGER | Count of *newly inserted* transactions from this upload (excludes duplicates skipped from this same file) |
 | `institution`        | TEXT    | The financial institution for this statement. Resolution order: a user-typed value on the Upload page always wins; otherwise [`detectInstitution()`](../src/lib/detectInstitution.ts) scans the statement's own text for a known bank/issuer name; `NULL` if neither finds one. Editable at any time afterward via the Statements list (`PATCH /api/statements`), which cascades to every transaction under it. |
+| `source`             | TEXT    | `"upload"` (default) for a CSV/PDF, `"plaid"` for a live bank connection — see [docs/plaid-bank-sync.md](plaid-bank-sync.md). A `"plaid"` statement has exactly one `plaid_items` row and its transaction count grows over time via sync instead of being fixed at insert time. |
 
 ### `transactions`
 
@@ -71,11 +85,12 @@ every statement.
 | `description`       | TEXT    | Raw merchant/description text as extracted from the statement          |
 | `amount`            | REAL    | Signed: positive = money in, negative = money out (see sign-convention note below) |
 | `category`          | TEXT    | One of the fixed categories in [categories.ts](../src/lib/categories.ts) |
-| `category_locked`   | INTEGER | `1` once a human has manually corrected the category via the Transactions page; currently informational only (nothing reads it back yet) |
-| `hash`              | TEXT    | `sha256(date \| lowercased-trimmed description \| amount.toFixed(2))` — see [dedupe.ts](../src/lib/dedupe.ts). Used to skip re-inserting the same transaction on a repeat/overlapping upload. Indexed, not unique-constrained (checked in application code, not the schema) |
+| `category_locked`   | INTEGER | `1` once a human has manually corrected the category via the Transactions page. Read by [`plaidSync.ts`](../src/lib/plaidSync.ts) to skip re-categorizing a Plaid transaction on re-sync, so a manual correction survives future syncs. |
+| `hash`              | TEXT    | `sha256(date \| lowercased-trimmed description \| amount.toFixed(2))` — see [dedupe.ts](../src/lib/dedupe.ts). Used to skip re-inserting the same transaction on a repeat/overlapping upload, and computed (but not used as the primary key) for Plaid-sourced rows too, as a cross-source safety net. Indexed, not unique-constrained (checked in application code, not the schema) |
 | `institution`       | TEXT    | Denormalized copy of the parent statement's `institution` at insert time, so filtering/aggregating by institution needs no join. `NULL` if the statement had none. |
+| `plaid_transaction_id` | TEXT | Plaid's own stable transaction id, `NULL` for an uploaded (non-Plaid) row. Unique when not null (partial unique index). The primary key for applying Plaid's added/modified/removed sync changesets — see [docs/plaid-bank-sync.md](plaid-bank-sync.md). |
 
-Indexes: `date`, `category`, `statement_id`, `hash`, `institution`.
+Indexes: `date`, `category`, `statement_id`, `hash`, `institution`, `plaid_transaction_id` (unique, partial).
 
 **Sign convention**: for a checking-account-style CSV, positive = deposit,
 negative = withdrawal, matching the source file. For a PDF detected as a credit
@@ -114,6 +129,24 @@ correction — enforced by a conditional `ON CONFLICT` clause in
 `saveMerchantCategory()`, not by application-level branching. This is what makes
 a manual fix on the Transactions page permanent for that merchant across all
 future imports.
+
+### `plaid_items`
+
+One row per connected bank (a Plaid "Item"), one-to-one with a `source =
+'plaid'` statement — see [docs/plaid-bank-sync.md](plaid-bank-sync.md) for
+the full design. Deleting the parent statement cascades to delete this row
+(and, via the `transactions.statement_id` cascade, every transaction it
+synced), which is the correct behavior for "disconnect this bank."
+
+| Column                    | Type    | Notes                                                                 |
+| ------------------------- | ------- | ---------------------------------------------------------------------- |
+| `id`                       | INTEGER | Primary key, autoincrement                                             |
+| `item_id`                  | TEXT    | Plaid's own item id, unique                                            |
+| `statement_id`             | INTEGER | FK → `statements.id`, `ON DELETE CASCADE`                              |
+| `access_token_encrypted`   | TEXT    | AES-256-GCM ciphertext (base64) — see [secretBox.ts](../src/lib/secretBox.ts). Never stored in plaintext. |
+| `cursor`                   | TEXT    | Plaid `/transactions/sync` cursor; `NULL` until the first sync completes |
+| `created_at`                | TEXT    | `datetime('now')` at connect time                                      |
+| `last_synced_at`            | TEXT    | `datetime('now')` after the most recent successful sync, else `NULL`   |
 
 ## Analytics layer
 
@@ -159,9 +192,11 @@ accounts, not spent).
 
 ## Categorization pipeline (how `category` gets set)
 
-Every transaction is categorized once, at upload time, by
-[`categorizeTransaction()`](../src/lib/categorizeTransaction.ts), which tries
-each layer in order and stops at the first hit:
+Every transaction is categorized once — at upload time for a CSV/PDF, at sync
+time for a Plaid-connected bank (both call the same
+[`categorizeTransaction()`](../src/lib/categorizeTransaction.ts), so there's
+one category system regardless of source) — trying each layer in order and
+stopping at the first hit:
 
 1. **Keyword rules** ([categories.ts](../src/lib/categories.ts)) — instant, free, human-curated substring matching.
 2. **Merchant cache** (`merchant_categories`) — instant, a merchant already resolved by the LLM or a prior user correction.
@@ -177,10 +212,12 @@ import of that merchant skips straight to step 2 instead of re-guessing.
 There is no migration framework — [`db.ts`](../src/lib/db.ts) runs
 `CREATE TABLE IF NOT EXISTS` for every table on every connection open, plus
 hand-written, idempotent migrations checked via `PRAGMA table_info` and called
-from `createDb()`: `migrateHashColumn` (adds and backfills `hash`) and
+from `createDb()`: `migrateHashColumn` (adds and backfills `hash`),
 `migrateInstitutionColumn` (adds `institution` to both tables, no backfill —
-existing rows just get `NULL`, shown as "—" in the UI). Any future schema
-change should follow the same pattern.
+existing rows just get `NULL`, shown as "—" in the UI), and
+`migratePlaidColumns` (adds `statements.source` defaulted to `'upload'`, and
+`transactions.plaid_transaction_id` plus its partial unique index). Any
+future schema change should follow the same pattern.
 
 **Caveat for a long-running dev server**: `createDb()` and its migrations only
 run once, when the process's cached connection (`global.__spendwiseDb`) is
