@@ -23,4 +23,6 @@ statements). Use the matching one instead of improvising when the task fits.
 
 [docs/database-schema.md](docs/database-schema.md) (schema, migrations,
 known data issues), [docs/packaging.md](docs/packaging.md) (Electron/release
-architecture and its incident history).
+architecture and its incident history), [docs/plaid-bank-sync.md](docs/plaid-bank-sync.md)
+(direct bank connections — architecture, the privacy tradeoff, why it's
+app-level token encryption not OS-keychain, sign-convention gotcha).

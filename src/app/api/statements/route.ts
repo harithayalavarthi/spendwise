@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { revokePlaidAccessForStatement } from "@/lib/plaidSync";
 
 export async function GET() {
   const db = getDb();
@@ -36,6 +37,10 @@ export async function DELETE(request: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "Missing id" }, { status: 400 });
   }
+  // No-op for a statement that isn't Plaid-connected; revokes access at
+  // Plaid first for one that is, so a connected bank can't outlive the
+  // local record of it having been connected.
+  await revokePlaidAccessForStatement(Number(id));
   const db = getDb();
   db.prepare(`DELETE FROM statements WHERE id = ?`).run(id);
   return NextResponse.json({ ok: true });
