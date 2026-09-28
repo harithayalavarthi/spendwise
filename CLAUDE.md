@@ -21,6 +21,10 @@ statements). Use the matching one instead of improvising when the task fits.
 
 ## Reference docs
 
+[specs/](specs/README.md) — requirements with IDs and status (Built/Partial/Open),
+decisions, and the roadmap of open work. Update the relevant requirement in the
+same PR as the change, and reference its ID.
+
 [docs/database-schema.md](docs/database-schema.md) (schema, migrations,
 known data issues), [docs/packaging.md](docs/packaging.md) (Electron/release
 architecture and its incident history), [docs/plaid-bank-sync.md](docs/plaid-bank-sync.md)
