@@ -29,8 +29,9 @@ opt-in features). Primary user: the owner, with accounts in Canada and the US.
 | IMP-4 | Built | **Statement boilerplate** (opening/closing/previous balance, totals, …) is recognized and dropped before insert (`statementNoise.ts`). |
 | IMP-5 | Built | **Duplicate detection** by a hash of (date, description, amount): re-uploads and overlapping exports don't double-count. Known false positive: two genuinely identical same-day transactions — the second is skipped. |
 | IMP-6 | Partial | **Institution detection** from the statement text (curated bank list); a value typed on Upload always wins; editable later per statement, cascading to its transactions. _Open defect(s): BUG-6._ |
-| IMP-7 | Partial | **Sign correctness for every supported format.** Scotiabank CSVs store expenses as positive amounts — see BUG-1. |
+| IMP-7 | Built | **Sign correctness for every supported format**, including **credit-card CSV exports** (charges positive, payments/credits negative), detected from card-only headers or chosen on Upload (IMP-9). _BUG-1 fixed 2026-09-28; stored rows repaired with `scripts/repair-bug1-card-csv.ts`._ |
 | IMP-8 | Built | Delete a statement and all its transactions. |
+| IMP-9 | Built | **Account type on Upload** (CSV): Auto-detect (default — card exports recognized by headers such as Card Number, Merchant Category, Rewards, Name on Card), Bank account, or Credit card; the result says how the file was read. Card payments are categorized as Transfers. _(Added 2026-09-28 with the BUG-1 fix.)_ |
 
 ### 2.2 Categorization (CAT)
 
@@ -116,7 +117,7 @@ suggested fix. When one is fixed, mark it here with the PR number.
 
 | ID | Severity | Affects | Issue | Defect |
 |---|---|---|---|---|
-| BUG-1 | High | IMP-7 | [#12](https://github.com/harithayalavarthi/spendwise/issues/12) | **Scotiabank CSV expenses are stored as positive amounts.** All 67 transactions from the 3 `Transaction History_*.csv` statements count as income: income overstated, expenses understated, and these rows are invisible to category charts and recurring detection. Likely cause: a debit/credit *type* column the parser doesn't read. Flagged 2026-09-21 and deliberately left alone at the owner's request; fix before trusting totals or building INT. See [docs/database-schema.md](../docs/database-schema.md) "Known issues". |
+| BUG-1 | ~~High~~ **Fixed 2026-09-28** | IMP-7 | [#12](https://github.com/harithayalavarthi/spendwise/issues/12) | ~~Scotiabank card CSV charges stored as positive amounts (counted as income).~~ Real cause: the files are **credit-card** exports (charges positive, payments negative) and the CSV importer didn't apply the card convention — fixed with header detection + an Upload override (IMP-9). The 68 stored rows are rebuilt from the original files by `scripts/repair-bug1-card-csv.ts` (dry run by default; backs up before `--apply`). |
 | BUG-2 | High | IMP-1, IMP-7 | [#13](https://github.com/harithayalavarthi/spendwise/issues/13) | "Debit Amount" / "Credit Amount" headers: debits come out positive, credits dropped |
 | BUG-3 | Medium | IMP-1 | [#17](https://github.com/harithayalavarthi/spendwise/issues/17) | A "Value Date" column can be picked as the amount column |
 | BUG-4 | Low | IMP-1 | [#22](https://github.com/harithayalavarthi/spendwise/issues/22) | CSV dates shift back a day in time zones east of UTC |
@@ -131,6 +132,7 @@ suggested fix. When one is fixed, mark it here with the PR number.
 | BUG-13 | Low | DASH-5 | [#25](https://github.com/harithayalavarthi/spendwise/issues/25) | Missed-payment suggestion wording: "every weekly", "every quarterly" |
 | BUG-14 | Medium | BANK-3 | [#21](https://github.com/harithayalavarthi/spendwise/issues/21) | Plaid: a manual category on a pending transaction is lost when it posts |
 | BUG-15 | ~~High · security~~ **Fixed 2026-09-28** | BANK-5 | [#11](https://github.com/harithayalavarthi/spendwise/issues/11) | ~~Failed bank disconnect writes the Plaid access token and secret to the log~~ — now only Plaid's error code/message is logged (`plaidErrorSummary`). |
+| BUG-16 | ~~High~~ **Fixed 2026-09-28** | IMP-1 | [#28](https://github.com/harithayalavarthi/spendwise/issues/28) | ~~CSV used "Merchant Category" as the description (first header containing "merchant") and dropped rows with a blank category — card payments.~~ Now prefers Description / Merchant Name, never uses category/location columns, and falls back instead of dropping; stored rows rebuilt by the BUG-1 repair. |
 
 ## 4. Non-functional requirements
 

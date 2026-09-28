@@ -175,20 +175,17 @@ accounts, not spent).
 
 ## Known issues
 
-- **Scotiabank CSV imports have expenses stored as positive amounts.** All 67
-  transactions from the 3 `Transaction History_*.csv` statements (Scotia
-  Bank) are positive, though correctly *categorized* (e.g. "Groceries",
-  "Utilities & Bills") — real expenses, not income. Because every
-  income/expense total in this app goes off the amount's sign, not the
-  category, these are currently counted as income: total income is
-  overstated, total expenses understated, and these rows are invisible to
-  anything filtering on `amount < 0` (category charts, recurring-payment
-  detection). Root cause not yet confirmed — likely a debit/credit
-  indicator column in the source CSV that `parseStatement.ts` doesn't check
-  (it only reads a single amount column, or separate debit/credit *amount*
-  columns, not a separate debit/credit *type* column). Flagged to the user
-  2026-09-21; left uncorrected at their request ("don't touch it yet") —
-  revisit before trusting this dataset's income/expense totals.
+- **Fixed 2026-09-28 — Scotiabank card CSV rows (BUG-1, BUG-16).** The 3
+  `Transaction History_*.csv` statements are credit-card exports: charges are
+  positive and payments negative, and the old CSV importer used them as-is
+  (charges counted as income), used `Merchant Category` as the description, and
+  dropped card payments (blank category). The importer now detects card exports
+  (and the Upload page has an Account type override). Rows imported before the
+  fix are rebuilt from the original files with
+  `npx jiti scripts/repair-bug1-card-csv.ts` (dry run; add `--apply` to back up
+  `data/spendwise.db` to `data/backups/` and repair). **Don't re-upload** those
+  files instead — the corrected rows hash differently, so they'd be
+  double-counted.
 
 ## Categorization pipeline (how `category` gets set)
 

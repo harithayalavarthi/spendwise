@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { parseStatementCsv } from "@/lib/parseStatement";
+import { parseStatementCsv, type AccountType } from "@/lib/parseStatement";
 import { parseStatementPdf } from "@/lib/parsePdfStatement";
 import { categorizeTransaction } from "@/lib/categorizeTransaction";
 import { transactionHash } from "@/lib/dedupe";
@@ -15,6 +15,11 @@ export async function POST(request: NextRequest) {
   }
 
   const userInstitution = (formData.get("institution") as string | null)?.trim() || null;
+  // CSV only: "auto" detects a credit-card export from its headers (BUG-1);
+  // the Upload page lets the user override that. PDFs detect this themselves.
+  const accountTypeInput = formData.get("accountType");
+  const requestedAccountType: AccountType | "auto" =
+    accountTypeInput === "bank" || accountTypeInput === "card" ? accountTypeInput : "auto";
 
   const name = file.name.toLowerCase();
   const isCsv = name.endsWith(".csv");
@@ -29,8 +34,8 @@ export async function POST(request: NextRequest) {
 
   logInfo("upload", `Parsing "${file.name}" (${isCsv ? "csv" : "pdf"}, ${file.size} bytes)`);
 
-  const { transactions, skippedRows, warning, detectedInstitution } = isCsv
-    ? parseStatementCsv(await file.text())
+  const { transactions, skippedRows, warning, detectedInstitution, accountType, accountTypeSource } = isCsv
+    ? parseStatementCsv(await file.text(), { accountType: requestedAccountType })
     : await parseStatementPdf(Buffer.from(await file.arrayBuffer()));
 
   logInfo(
@@ -73,7 +78,10 @@ export async function POST(request: NextRequest) {
     }
     seenInThisUpload.add(hash);
 
-    const { category, source } = await categorizeTransaction(t.description, t.amount);
+    // The statement itself can say what a row is (a card payment is a Transfer).
+    const { category, source } = t.categoryHint
+      ? { category: t.categoryHint, source: "statement" }
+      : await categorizeTransaction(t.description, t.amount);
     categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
     sourceCounts[source] = (sourceCounts[source] ?? 0) + 1;
     toInsert.push({ date: t.date, description: t.description, amount: t.amount, category, hash });
@@ -118,5 +126,7 @@ export async function POST(request: NextRequest) {
     totalStatements: totals.statements,
     institution,
     institutionSource,
+    accountType: accountType ?? null,
+    accountTypeSource: accountTypeSource ?? null,
   });
 }

@@ -248,26 +248,69 @@ describe("parseStatementCsv — separate debit/credit columns (IMP-1, IMP-7)", (
   });
 });
 
-describe("parseStatementCsv — Scotiabank-style type column (IMP-7, BUG-1)", () => {
-  // Imitates the Scotiabank layout behind BUG-1: every amount is positive and
-  // a separate Type column says whether the row is a Debit or a Credit.
-  const csv = readCsvFixture("csv-scotiabank-type-column.csv");
+describe("parseStatementCsv — credit-card exports (IMP-7, BUG-1, BUG-16)", () => {
+  // Imitates Scotiabank's card "Transaction History" CSV (same columns): charges
+  // are positive, payments/credits negative, and a blank Merchant Category on
+  // the card payment. Merchants and numbers are invented.
+  const csv = readCsvFixture("csv-card-export.csv");
 
-  it("currently parses every row, including the credit, from the Amount column", () => {
+  it("detects a card export from its headers and says so", () => {
     const result = parseStatementCsv(csv);
-    expect(result.transactions.map((t) => t.description)).toEqual([
-      "WOODGROVE GROCERY MART",
-      "LITWARE HYDRO BILL",
-      "TAILSPIN PAYROLL",
-    ]);
-    expect(result.transactions[2].amount).toBe(1800);
+    expect(result.accountType).toBe("card");
+    expect(result.accountTypeSource).toBe("detected");
+    expect(result.warning).toMatch(/credit card statement/);
   });
 
-  // BUG-1: the parser ignores the debit/credit Type column, so Scotiabank
-  // expenses are imported as positive amounts (counted as income). Debits
-  // should come out negative. Fixing BUG-1 will make this test pass.
-  it.fails("makes Debit rows negative and Credit rows positive", () => {
-    expect(parseStatementCsv(csv).transactions.map((t) => t.amount)).toEqual([-64.3, -112, 1800]);
+  it("imports charges as expenses and payments/credits as money in (BUG-1)", () => {
+    expect(parseStatementCsv(csv).transactions.map((t) => t.amount)).toEqual([-54.2, -4.75, 1250, 18.99, -112.31]);
+  });
+
+  it("uses Merchant Name, not Merchant Category, as the description (BUG-16)", () => {
+    expect(parseStatementCsv(csv).transactions.map((t) => t.description)).toEqual([
+      "WOODGROVE MARKET #12",
+      "FOURTH COFFEE",
+      "PRE-AUTHORIZED PAYMENT",
+      "LITWARE BOOKS",
+      "CONTOSO CABLE",
+    ]);
+  });
+
+  it("keeps the card payment row whose Merchant Category is blank, as a Transfer", () => {
+    const result = parseStatementCsv(csv);
+    expect(result.skippedRows).toBe(0);
+    const payment = result.transactions.find((t) => t.description === "PRE-AUTHORIZED PAYMENT");
+    expect(payment).toMatchObject({ amount: 1250, categoryHint: "Transfers" });
+    // A refund is money in but not a transfer — it gets categorized normally.
+    expect(result.transactions.find((t) => t.description === "LITWARE BOOKS")?.categoryHint).toBeUndefined();
+  });
+
+  it("lets the uploader override the detection either way", () => {
+    const asBank = parseStatementCsv(csv, { accountType: "bank" });
+    expect(asBank.accountType).toBe("bank");
+    expect(asBank.accountTypeSource).toBe("user");
+    expect(asBank.transactions.map((t) => t.amount)).toEqual([54.2, 4.75, -1250, -18.99, 112.31]);
+    expect(asBank.warning).toBeUndefined();
+
+    const generic = "Date,Description,Amount\n2026-06-01,FOURTH COFFEE,4.75\n";
+    expect(parseStatementCsv(generic).accountType).toBe("bank");
+    expect(parseStatementCsv(generic, { accountType: "card" }).transactions[0].amount).toBe(-4.75);
+  });
+
+  it("needs two card-only header signals, not one", () => {
+    const oneSignal = "Date,Description,Amount,Rewards\n2026-06-01,FOURTH COFFEE,4.75,\n";
+    expect(parseStatementCsv(oneSignal).accountType).toBe("bank");
+    expect(parseStatementCsv(oneSignal).transactions[0].amount).toBe(4.75);
+  });
+
+  it("never flips a debit/credit pair, even with card-like headers", () => {
+    const pair = "Date,Merchant Name,Merchant Category,Name on Card,Debit,Credit\n2026-06-01,FOURTH COFFEE,Eating Places,ALEX SAMPLE,4.75,\n";
+    expect(parseStatementCsv(pair).transactions[0].amount).toBe(-4.75);
+  });
+
+  it("attaches the source row only when asked", () => {
+    expect(parseStatementCsv(csv).transactions[0].sourceRow).toBeUndefined();
+    const row = parseStatementCsv(csv, { includeSourceRow: true }).transactions[0].sourceRow;
+    expect(row?.["Merchant Category"]).toBe("Grocery Stores and Supermarkets");
   });
 });
 

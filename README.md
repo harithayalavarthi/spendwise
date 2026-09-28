@@ -99,6 +99,10 @@ OLLAMA_HOST=http://localhost:11434
   others at the end followed by a running balance, which is detected and dropped).
   Always spot-check a PDF import against the actual statement. Scanned/image-only
   PDFs won't parse at all — export CSV instead.
+- **Credit card CSV exports are detected too** — by card-only columns such as
+  "Card Number", "Merchant Category", "Rewards", or "Name on Card" — and read
+  with the card convention (charges → expenses, payments → Transfers). If
+  detection gets a file wrong, set **Account type** on the Upload page.
 - **Credit card statements are detected** (via "new balance" / "minimum payment" /
   "credit limit" wording) and handled with the opposite sign convention from a
   checking account: an unsigned line is a charge (expense), and a payment/credit

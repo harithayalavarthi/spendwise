@@ -10,8 +10,7 @@ changing the privacy story gets a feature flag.
    analytics, and Plaid; they found BUG-2…BUG-15.
 2. **Fix the defects in priority order** (requirements §3, issues #11–#25):
    ~~**BUG-15** (secret in logs)~~ fixed 2026-09-28; then the High ones that distort real
-   numbers today — **BUG-1** (Scotiabank signs; agree how to correct the 67
-   stored rows), **BUG-2**, **BUG-6**, **BUG-10**, **BUG-12**; then Medium
+   numbers today — ~~**BUG-1**~~ (fixed with BUG-16; run the repair script once), **BUG-2**, **BUG-6**, **BUG-10**, **BUG-12**; then Medium
    (BUG-3, 7, 8, 9, 14) and Low (BUG-4, 5, 11, 13). Each fix flips its pinned
    `it.fails` test.
 3. ~~**CI on pull requests (NFR-7).**~~ Done — typecheck, lint, tests, and build on every PR.
