@@ -6,12 +6,14 @@ changing the privacy story gets a feature flag.
 
 ## Now — correctness and safety net
 
-1. **Tests (NFR-6)** — foundation done (Vitest, safety harness, CI step).
-   Test suites for CSV/PDF import, categorization, analytics, and Plaid are in
-   progress in parallel. Doing this first makes BUG-1 safe to fix.
-2. **Fix BUG-1 — Scotiabank sign (IMP-7).** When the owner is ready (OQ-1):
-   read the CSV's debit/credit type column, add a fixture test, and decide how
-   to correct the 67 existing rows (re-import vs. a one-off migration).
+1. ~~**Tests (NFR-6)**~~ Done — 428 tests across import, categorization,
+   analytics, and Plaid; they found BUG-2…BUG-15.
+2. **Fix the defects in priority order** (requirements §3, issues #11–#25):
+   **BUG-15** (secret in logs) first; then the High ones that distort real
+   numbers today — **BUG-1** (Scotiabank signs; agree how to correct the 67
+   stored rows), **BUG-2**, **BUG-6**, **BUG-10**, **BUG-12**; then Medium
+   (BUG-3, 7, 8, 9, 14) and Low (BUG-4, 5, 11, 13). Each fix flips its pinned
+   `it.fails` test.
 3. ~~**CI on pull requests (NFR-7).**~~ Done — typecheck, lint, tests, and build on every PR.
 
 ## Next — prerequisites for the Nudge link

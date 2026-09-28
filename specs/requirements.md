@@ -23,12 +23,12 @@ opt-in features). Primary user: the owner, with accounts in Canada and the US.
 
 | ID | Status | Requirement |
 |---|---|---|
-| IMP-1 | Built | Upload a **CSV** statement; auto-detect date, description, and amount columns, or separate debit/credit amount columns. |
-| IMP-2 | Partial | Upload a **PDF** statement; heuristic line-by-line extraction (one or two leading dates with year inference from the statement period, amount found anywhere on the line, running balance detected and dropped). Scanned/image-only PDFs aren't supported. Always less reliable than CSV — spot-check against the statement. |
-| IMP-3 | Built | **Credit-card detection** ("new balance", "minimum payment", "credit limit" wording) applies the card sign convention: an unsigned line is a charge; a payment/credit is a Transfer, not income. |
+| IMP-1 | Partial | Upload a **CSV** statement; auto-detect date, description, and amount columns, or separate debit/credit amount columns. _Open defect(s): BUG-2, BUG-3, BUG-4, BUG-5._ |
+| IMP-2 | Partial | Upload a **PDF** statement; heuristic line-by-line extraction (one or two leading dates with year inference from the statement period, amount found anywhere on the line, running balance detected and dropped). Scanned/image-only PDFs aren't supported. Always less reliable than CSV — spot-check against the statement. _Open defects: BUG-7, BUG-8._ |
+| IMP-3 | Partial | **Credit-card detection** ("new balance", "minimum payment", "credit limit" wording) applies the card sign convention: an unsigned line is a charge; a payment/credit is a Transfer, not income. _Open defect(s): BUG-9._ |
 | IMP-4 | Built | **Statement boilerplate** (opening/closing/previous balance, totals, …) is recognized and dropped before insert (`statementNoise.ts`). |
 | IMP-5 | Built | **Duplicate detection** by a hash of (date, description, amount): re-uploads and overlapping exports don't double-count. Known false positive: two genuinely identical same-day transactions — the second is skipped. |
-| IMP-6 | Built | **Institution detection** from the statement text (curated bank list); a value typed on Upload always wins; editable later per statement, cascading to its transactions. |
+| IMP-6 | Partial | **Institution detection** from the statement text (curated bank list); a value typed on Upload always wins; editable later per statement, cascading to its transactions. _Open defect(s): BUG-6._ |
 | IMP-7 | Partial | **Sign correctness for every supported format.** Scotiabank CSVs store expenses as positive amounts — see BUG-1. |
 | IMP-8 | Built | Delete a statement and all its transactions. |
 
@@ -38,8 +38,8 @@ opt-in features). Primary user: the owner, with accounts in Canada and the US.
 |---|---|---|
 | CAT-1 | Built | **Layered categorization** at import: keyword rules → merchant cache → local LLM → amount-sign fallback (Income/Other). |
 | CAT-2 | Built | The **local LLM** (Ollama, default `qwen2.5:7b`, `temperature: 0`) answers "Other" rather than guessing when a merchant gives no clue; if Ollama isn't running, import still works via the fallback. |
-| CAT-3 | Built | Every LLM result is **cached per merchant**; the same merchant is never re-classified. |
-| CAT-4 | Built | A **manual correction** on the Transactions page updates the transaction, locks its category, and overrides the merchant cache for all future imports. |
+| CAT-3 | Partial | Every LLM result is **cached per merchant**; the same merchant is never re-classified. _Open defect(s): BUG-11._ |
+| CAT-4 | Partial | A **manual correction** on the Transactions page updates the transaction, locks its category, and overrides the merchant cache for all future imports. _Open defect(s): BUG-10._ |
 
 ### 2.3 Analytics (DASH)
 
@@ -47,9 +47,9 @@ opt-in features). Primary user: the owner, with accounts in Canada and the US.
 |---|---|---|
 | DASH-1 | Built | Spending by category; income vs. expenses over time; monthly spending stacked by institution. |
 | DASH-2 | Built | Month explorer: pick a month, see its category and institution breakdown. |
-| DASH-3 | Built | Highest-spend days and day-of-week pattern. |
+| DASH-3 | Partial | Highest-spend days and day-of-week pattern. _Open defect(s): BUG-12._ |
 | DASH-4 | Built | **Recurring payments**: 3+ charges at a consistent cadence (weekly → yearly) and amount (±20% or $3), with status on-track / due-soon / missed. "Missed" is relative to the latest date in the data, not today. |
-| DASH-5 | Built | **Rule-based suggestions**: top-category share, month-over-month spikes, savings rate, subscriptions total, missed recurring payments. |
+| DASH-5 | Partial | **Rule-based suggestions**: top-category share, month-over-month spikes, savings rate, subscriptions total, missed recurring payments. _Open defect(s): BUG-13._ |
 | DASH-6 | Built | **Transfers** are excluded from income, expense, and savings-rate totals everywhere. |
 | DASH-7 | Open | **Currency per institution** (USD vs CAD). Today every amount is treated and shown as "$", so mixed US/Canadian accounts are summed as if one currency. Also needed for the Nudge link (INT-4). |
 
@@ -67,9 +67,9 @@ Details: [docs/plaid-bank-sync.md](../docs/plaid-bank-sync.md).
 |---|---|---|
 | BANK-1 | Built | Connect a bank via **Plaid** (Sandbox) on an Accounts page shown only when `FEATURE_BANK_SYNC=true`; a connection is modeled as a `statements` row with `source = 'plaid'`. |
 | BANK-2 | Built | **Incremental sync** with Plaid's `/transactions/sync` cursor (added/modified/removed), keyed by `plaid_transaction_id`, plus the content hash as a safety net against CSV overlap. Plaid's sign is flipped to the app's convention. |
-| BANK-3 | Built | Synced transactions use the same categorization pipeline (CAT-1); locked manual corrections survive re-syncs. |
+| BANK-3 | Partial | Synced transactions use the same categorization pipeline (CAT-1); locked manual corrections survive re-syncs. _Open defect(s): BUG-14._ |
 | BANK-4 | Built | Sync is **manual ("Sync now") plus best-effort when the Accounts page loads** — no webhooks (a local app has no public endpoint). |
-| BANK-5 | Built | Access tokens are **encrypted at rest** (AES-256-GCM, key in a `0600` file next to the database). |
+| BANK-5 | Partial | Access tokens are **encrypted at rest** (AES-256-GCM, key in a `0600` file next to the database). _Open defect(s): BUG-15._ |
 | BANK-6 | Built | Disconnecting revokes the item at Plaid and deletes its local transactions. |
 | BANK-7 | Out of scope | **Production (real banks)** — a separate decision needing a Plaid account and current pricing. |
 | BANK-8 | Out of scope | Webhooks / real-time sync. |
@@ -107,9 +107,30 @@ this sits behind a new SpendWise feature flag.
 
 ## 3. Open defects (BUG)
 
-| ID | Severity | Defect |
-|---|---|---|
-| BUG-1 | High | **Scotiabank CSV expenses are stored as positive amounts.** All 67 transactions from the 3 `Transaction History_*.csv` statements count as income: income overstated, expenses understated, and these rows are invisible to category charts and recurring detection. Likely cause: a debit/credit *type* column the parser doesn't read. Flagged 2026-09-21 and deliberately left alone at the owner's request; fix before trusting totals or building INT. See [docs/database-schema.md](../docs/database-schema.md) "Known issues". |
+Found by the test suite on 2026-09-28 (except BUG-1, known since 2026-09-21).
+Each is pinned by an `it.fails` test — fixing it flips that test to a normal
+`it` — and tracked as a GitHub issue with the details, the pinned test, and a
+suggested fix. When one is fixed, mark it here with the PR number.
+
+**Fix order:** BUG-15 (security) → High (numbers wrong today) → Medium → Low.
+
+| ID | Severity | Affects | Issue | Defect |
+|---|---|---|---|---|
+| BUG-1 | High | IMP-7 | [#12](https://github.com/harithayalavarthi/spendwise/issues/12) | **Scotiabank CSV expenses are stored as positive amounts.** All 67 transactions from the 3 `Transaction History_*.csv` statements count as income: income overstated, expenses understated, and these rows are invisible to category charts and recurring detection. Likely cause: a debit/credit *type* column the parser doesn't read. Flagged 2026-09-21 and deliberately left alone at the owner's request; fix before trusting totals or building INT. See [docs/database-schema.md](../docs/database-schema.md) "Known issues". |
+| BUG-2 | High | IMP-1, IMP-7 | [#13](https://github.com/harithayalavarthi/spendwise/issues/13) | "Debit Amount" / "Credit Amount" headers: debits come out positive, credits dropped |
+| BUG-3 | Medium | IMP-1 | [#17](https://github.com/harithayalavarthi/spendwise/issues/17) | A "Value Date" column can be picked as the amount column |
+| BUG-4 | Low | IMP-1 | [#22](https://github.com/harithayalavarthi/spendwise/issues/22) | CSV dates shift back a day in time zones east of UTC |
+| BUG-5 | Low | IMP-1 | [#23](https://github.com/harithayalavarthi/spendwise/issues/23) | CSV: impossible dates roll over into the next month |
+| BUG-6 | High | IMP-6 | [#14](https://github.com/harithayalavarthi/spendwise/issues/14) | Institution detection: "purchase" is detected as Chase |
+| BUG-7 | Medium | IMP-2 | [#18](https://github.com/harithayalavarthi/spendwise/issues/18) | PDF: transactions with year-less dates (MM/DD) are skipped |
+| BUG-8 | Medium | IMP-2 | [#19](https://github.com/harithayalavarthi/spendwise/issues/19) | PDF: Dec→Jan statement period assigns January transactions to the wrong year |
+| BUG-9 | Medium | IMP-3 | [#20](https://github.com/harithayalavarthi/spendwise/issues/20) | PDF: a "CR"-suffixed credit on a card statement is imported as a charge |
+| BUG-10 | High | CAT-4 | [#15](https://github.com/harithayalavarthi/spendwise/issues/15) | Manual category corrections are ignored when a keyword rule matches the merchant |
+| BUG-11 | Low | CAT-3 | [#24](https://github.com/harithayalavarthi/spendwise/issues/24) | Merchant key keeps short MM/DD dates, so the same merchant is re-sent to the LLM |
+| BUG-12 | High | DASH-3 | [#16](https://github.com/harithayalavarthi/spendwise/issues/16) | "Top spending days" names the day's smallest expense as its biggest |
+| BUG-13 | Low | DASH-5 | [#25](https://github.com/harithayalavarthi/spendwise/issues/25) | Missed-payment suggestion wording: "every weekly", "every quarterly" |
+| BUG-14 | Medium | BANK-3 | [#21](https://github.com/harithayalavarthi/spendwise/issues/21) | Plaid: a manual category on a pending transaction is lost when it posts |
+| BUG-15 | High · security | BANK-5 | [#11](https://github.com/harithayalavarthi/spendwise/issues/11) | Failed bank disconnect writes the Plaid access token and secret to the log |
 
 ## 4. Non-functional requirements
 
@@ -120,7 +141,7 @@ this sits behind a new SpendWise feature flag.
 | NFR-3 | Built | **No real data in builds:** `data/**` and `*.db*` are excluded from build output and verified after packaging changes. |
 | NFR-4 | Built | **Test data never mixes into the real database;** manual test uploads are deleted with a before/after row count. |
 | NFR-5 | Built | Server-side logging for the upload/categorization pipeline via `src/lib/logger.ts`. |
-| NFR-6 | Partial | **Automated tests** with Vitest (`npm test`, `tests/`): the harness (throwaway database per test file with a guard against the real `data/`, network blocked, synthetic fixtures only) and dedupe tests landed 2026-09-28 (PR #5); test suites for import, categorization, analytics, and Plaid are in progress. Rules in [docs/coding-standards.md](../docs/coding-standards.md) "Testing". |
+| NFR-6 | Built | **Automated tests** with Vitest (`npm test`, `tests/`, run in CI): a safety harness (throwaway database per test file, guard against the real `data/`, network blocked, synthetic fixtures only) and suites for CSV/PDF import, categorization (incl. the NFR-2 privacy check), analytics, Plaid sync, token encryption, and feature flags — 428 tests as of 2026-09-28, 16 of them `it.fails` pins for BUG-1…15. Not yet covered: API route handlers beyond Plaid errors, and the UI. Rules in [docs/coding-standards.md](../docs/coding-standards.md) "Testing". |
 | NFR-7 | Built | **CI on pull requests** (`.github/workflows/ci.yml`): typecheck, lint, tests, and build on every PR and push to `main`. It had been failing at typecheck since 2026-09-23 (Next's generated route types were missing on a fresh checkout); fixed 2026-09-28 by running `next typegen` first. |
 
 ## 5. Open questions
