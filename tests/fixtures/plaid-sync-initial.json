@@ -1,0 +1,39 @@
+{
+  "_comment": "Synthetic /transactions/sync first page, shaped like a Plaid Sandbox 'Platypus Bank' checking account. All ids, merchants, and amounts are made up. Plaid sign: positive = money out.",
+  "added": [
+    {
+      "transaction_id": "txn_sbx_coffee_0001",
+      "pending_transaction_id": null,
+      "account_id": "acct_sbx_checking_0001",
+      "date": "2026-09-01",
+      "name": "STARBUCKS STORE 0421",
+      "merchant_name": "Starbucks",
+      "amount": 4.75,
+      "pending": false
+    },
+    {
+      "transaction_id": "txn_sbx_payroll_0001",
+      "pending_transaction_id": null,
+      "account_id": "acct_sbx_checking_0001",
+      "date": "2026-09-02",
+      "name": "PLATYPUS PAYROLL DIRECT DEP",
+      "merchant_name": null,
+      "amount": -2500,
+      "pending": false
+    },
+    {
+      "transaction_id": "txn_sbx_refund_0001",
+      "pending_transaction_id": null,
+      "account_id": "acct_sbx_checking_0001",
+      "date": "2026-09-03",
+      "name": "WALMART RETURN",
+      "merchant_name": "Walmart",
+      "amount": -19.99,
+      "pending": false
+    }
+  ],
+  "modified": [],
+  "removed": [],
+  "next_cursor": "cursor_sbx_page_1",
+  "has_more": false
+}
