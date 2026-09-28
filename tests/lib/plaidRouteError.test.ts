@@ -1,7 +1,7 @@
 // plaidErrorResponse: how a failed Plaid call becomes a JSON API response
 // (used by the /api/plaid/* routes). Error shapes below are synthetic.
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { plaidErrorResponse } from "@/lib/plaidRouteError";
+import { plaidErrorResponse, plaidErrorSummary } from "@/lib/plaidRouteError";
 
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -59,3 +59,31 @@ describe("plaidErrorResponse", () => {
     expect(logged).not.toContain("access-sandbox");
   });
 });
+
+describe("plaidErrorSummary (BUG-15)", () => {
+  // Shaped like the Axios error the Plaid client rejects with.
+  const axiosLike = Object.assign(new Error("Request failed with status code 400"), {
+    config: {
+      data: JSON.stringify({ access_token: "access-sandbox-fake-token" }),
+      headers: { "PLAID-CLIENT-ID": "client_sbx_fake", "PLAID-SECRET": "secret_sbx_fake" },
+    },
+    response: { status: 400, data: { error_code: "ITEM_NOT_FOUND", error_message: "the Item was not found" } },
+  });
+
+  it("returns Plaid's error code and message", () => {
+    expect(plaidErrorSummary(axiosLike)).toBe("ITEM_NOT_FOUND: the Item was not found");
+  });
+
+  it("never includes the request body or headers", () => {
+    const s = plaidErrorSummary(axiosLike);
+    for (const secret of ["access-sandbox-fake-token", "client_sbx_fake", "secret_sbx_fake"]) {
+      expect(s).not.toContain(secret);
+    }
+  });
+
+  it("falls back to a plain Error's message, or the value as text", () => {
+    expect(plaidErrorSummary(new Error("socket hang up"))).toBe("socket hang up");
+    expect(plaidErrorSummary("boom")).toBe("boom");
+  });
+});
+
