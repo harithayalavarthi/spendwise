@@ -44,12 +44,14 @@ ever sees transaction descriptions, test data never mixes into the real db).
 
 ## 4. Verify before opening the PR
 
-There's no automated test suite yet, so verification is: run these, and
+Verification is: run these (add or update tests in `tests/` for the change —
+see docs/coding-standards.md "Testing"), and
 actually exercise the change against a real dev server.
 
 ```bash
 npm run typecheck
 npm run lint
+npm test
 npm run build
 ```
 
