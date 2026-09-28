@@ -6,14 +6,13 @@ changing the privacy story gets a feature flag.
 
 ## Now — correctness and safety net
 
-1. **Tests for the parsing core (NFR-6, OQ-5).** Add Vitest with fixture
-   statements (synthetic, never real data) covering each supported CSV/PDF
-   format, sign conventions, boilerplate filtering, duplicate detection, and
-   recurring detection. Doing this first makes BUG-1 safe to fix.
+1. **Tests (NFR-6)** — foundation done (Vitest, safety harness, CI step).
+   Test suites for CSV/PDF import, categorization, analytics, and Plaid are in
+   progress in parallel. Doing this first makes BUG-1 safe to fix.
 2. **Fix BUG-1 — Scotiabank sign (IMP-7).** When the owner is ready (OQ-1):
    read the CSV's debit/credit type column, add a fixture test, and decide how
    to correct the 67 existing rows (re-import vs. a one-off migration).
-3. **CI on pull requests (NFR-7).** Typecheck, lint, build, and tests on every PR.
+3. ~~**CI on pull requests (NFR-7).**~~ Done — typecheck, lint, tests, and build on every PR.
 
 ## Next — prerequisites for the Nudge link
 

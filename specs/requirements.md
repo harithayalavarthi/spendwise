@@ -120,8 +120,8 @@ this sits behind a new SpendWise feature flag.
 | NFR-3 | Built | **No real data in builds:** `data/**` and `*.db*` are excluded from build output and verified after packaging changes. |
 | NFR-4 | Built | **Test data never mixes into the real database;** manual test uploads are deleted with a before/after row count. |
 | NFR-5 | Built | Server-side logging for the upload/categorization pipeline via `src/lib/logger.ts`. |
-| NFR-6 | Open | **Automated tests.** There's no test suite (no Jest/Vitest); verification is `typecheck`, `lint`, `build`, and manual runs. Needed especially for parsing (every bank format and sign convention), duplicate detection, recurring detection, and INT. |
-| NFR-7 | Open | **CI on pull requests** running typecheck, lint, build, and (once NFR-6 exists) tests — as Sift and Nudge now do. |
+| NFR-6 | Partial | **Automated tests** with Vitest (`npm test`, `tests/`): the harness (throwaway database per test file with a guard against the real `data/`, network blocked, synthetic fixtures only) and dedupe tests landed 2026-09-28 (PR #5); test suites for import, categorization, analytics, and Plaid are in progress. Rules in [docs/coding-standards.md](../docs/coding-standards.md) "Testing". |
+| NFR-7 | Built | **CI on pull requests** (`.github/workflows/ci.yml`): typecheck, lint, tests, and build on every PR and push to `main`. It had been failing at typecheck since 2026-09-23 (Next's generated route types were missing on a fresh checkout); fixed 2026-09-28 by running `next typegen` first. |
 
 ## 5. Open questions
 
@@ -131,4 +131,4 @@ this sits behind a new SpendWise feature flag.
 | OQ-2 | Pursue Plaid Production (real banks)? | Not yet; needs a pricing check and a privacy decision. |
 | OQ-3 | Sign the desktop builds? | No while the owner runs from source; revisit if others use the app. |
 | OQ-4 | Keep `bankSync` as a permanent opt-in or remove the flag? | Keep — it guards a privacy change, not just a rollout. |
-| OQ-5 | Test framework for NFR-6? | Vitest (fits the Next.js/TypeScript stack). |
+| ~~OQ-5~~ | ~~Test framework for NFR-6?~~ | **Resolved 2026-09-28: Vitest 4** (v5 needs newer `@types/node`). |
