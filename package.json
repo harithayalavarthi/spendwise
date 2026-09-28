@@ -1,7 +1,7 @@
 {
   "name": "spendwise",
   "version": "0.2.0",
-  "description": "Upload bank statements, auto-categorize transactions, and see spending analytics — locally, with no data leaving your machine.",
+  "description": "Upload bank statements, auto-categorize transactions, and see spending analytics \u2014 locally, with no data leaving your machine.",
   "author": "harithayalavarthi",
   "private": true,
   "main": "dist-electron/main.js",
@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "electron:compile": "tsc -p tsconfig.electron.json",
     "electron:prepare": "node scripts/electron-prepare.mjs",
     "electron:dev": "npm run electron:prepare && electron .",
@@ -43,7 +45,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
