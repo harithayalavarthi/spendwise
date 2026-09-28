@@ -1,0 +1,13 @@
+Maple Harbor Credit Union
+Everyday Checking Statement
+Statement Date: March 31, 2026
+Account ending 0000
+
+Date Description Amount Balance
+03/01/2026 Opening Balance 1,000.00
+03/02/2026 BLUE KETTLE COFFEE 4.50 995.50
+03/05/2026 ACME PAYROLL DIRECT DEP 2,000.00 2,995.50
+03/09/2026 -120.00 GRIDLINE ELECTRIC 2,875.50
+03/14/2026 FERNWOOD GROCERY -$86.25 2,789.25
+03/31/2026 Closing Balance 2,789.25
+Thank you for banking with us.

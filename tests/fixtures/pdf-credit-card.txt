@@ -1,0 +1,13 @@
+Lanternfly Rewards Card
+Closing Date: Jan 5, 2027
+Previous Balance $300.00
+New Balance $412.75
+Minimum Payment Due $35.00
+Credit Limit $5,000.00
+
+Trans Post Description Amount
+Dec 20 Dec 22 PINECONE BOOKSHOP 42.75
+Dec 28 Dec 29 PAYMENT - THANK YOU -300.00
+Jan 2 Jan 3 ORBIT CINEMA 20.00
+Jan 3 Jan 4 ORBIT CINEMA REFUND -10.00
+Jan 5 New Balance 412.75
