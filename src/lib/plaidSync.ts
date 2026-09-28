@@ -4,6 +4,7 @@ import { decrypt } from "./secretBox";
 import { categorizeTransaction } from "./categorizeTransaction";
 import { transactionHash } from "./dedupe";
 import { logInfo, logWarn } from "./logger";
+import { plaidErrorSummary } from "./plaidRouteError";
 import type { Transaction as PlaidTransaction } from "plaid";
 
 interface PlaidItemRow {
@@ -149,6 +150,6 @@ export async function revokePlaidAccessForStatement(statementId: number): Promis
     // Still let the caller delete local data even if Plaid's revoke call
     // fails (e.g. the item was already removed on Plaid's side) — log it
     // rather than leaving the user unable to disconnect from their own app.
-    logWarn("plaid-sync", `itemRemove failed for ${item.item_id}, deleting local data anyway`, err);
+    logWarn("plaid-sync", `itemRemove failed for ${item.item_id}, deleting local data anyway: ${plaidErrorSummary(err)}`);
   }
 }

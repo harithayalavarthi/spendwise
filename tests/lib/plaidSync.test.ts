@@ -433,13 +433,10 @@ describe("disconnect (BANK-6)", () => {
     expect(storedRows().map((r) => r.plaid_transaction_id)).toEqual(["txn_sbx_other_1"]);
   });
 
-  // BUG: when itemRemove fails, the raw error object is passed to logWarn.
-  // Plaid's client rejects with an Axios error whose `config.data` is the
-  // JSON request body — i.e. the decrypted access token — and whose
-  // `config.headers` carry PLAID-CLIENT-ID/PLAID-SECRET. console.warn prints
-  // all of it to the server log, defeating BANK-5's encryption at rest.
-  // Flips to a pass once only a safe summary (message / error_code) is logged.
-  it.fails("does not write the decrypted access token to the log when itemRemove fails", async () => {
+  // BUG-15 (fixed): the raw Axios error — whose `config.data` holds the
+  // decrypted access token and `config.headers` the Plaid client id/secret —
+  // used to be passed to logWarn. Now only Plaid's error code/message is logged.
+  it("does not write the decrypted access token to the log when itemRemove fails", async () => {
     const { statementId } = seedPlaidItem();
     // Shaped like an AxiosError from the plaid client (fields it really has).
     const axiosLike = Object.assign(new Error("Request failed with status code 400"), {
@@ -460,7 +457,9 @@ describe("disconnect (BANK-6)", () => {
       .mock.calls.map((args) => util.format(...args))
       .join("\n");
     expect(logged).toContain("itemRemove failed");
+    expect(logged).toContain("ITEM_NOT_FOUND: the Item was not found"); // still useful for debugging
     expect(logged).not.toContain(FAKE_ACCESS_TOKEN);
     expect(logged).not.toContain("secret_sbx_fake");
+    expect(logged).not.toContain("client_sbx_fake");
   });
 });

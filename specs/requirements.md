@@ -69,7 +69,7 @@ Details: [docs/plaid-bank-sync.md](../docs/plaid-bank-sync.md).
 | BANK-2 | Built | **Incremental sync** with Plaid's `/transactions/sync` cursor (added/modified/removed), keyed by `plaid_transaction_id`, plus the content hash as a safety net against CSV overlap. Plaid's sign is flipped to the app's convention. |
 | BANK-3 | Partial | Synced transactions use the same categorization pipeline (CAT-1); locked manual corrections survive re-syncs. _Open defect(s): BUG-14._ |
 | BANK-4 | Built | Sync is **manual ("Sync now") plus best-effort when the Accounts page loads** — no webhooks (a local app has no public endpoint). |
-| BANK-5 | Partial | Access tokens are **encrypted at rest** (AES-256-GCM, key in a `0600` file next to the database). _Open defect(s): BUG-15._ |
+| BANK-5 | Built | Access tokens are **encrypted at rest** (AES-256-GCM, key in a `0600` file next to the database).Plaid errors are logged only as code/message, never the raw error (BUG-15 fixed). |
 | BANK-6 | Built | Disconnecting revokes the item at Plaid and deletes its local transactions. |
 | BANK-7 | Out of scope | **Production (real banks)** — a separate decision needing a Plaid account and current pricing. |
 | BANK-8 | Out of scope | Webhooks / real-time sync. |
@@ -130,7 +130,7 @@ suggested fix. When one is fixed, mark it here with the PR number.
 | BUG-12 | High | DASH-3 | [#16](https://github.com/harithayalavarthi/spendwise/issues/16) | "Top spending days" names the day's smallest expense as its biggest |
 | BUG-13 | Low | DASH-5 | [#25](https://github.com/harithayalavarthi/spendwise/issues/25) | Missed-payment suggestion wording: "every weekly", "every quarterly" |
 | BUG-14 | Medium | BANK-3 | [#21](https://github.com/harithayalavarthi/spendwise/issues/21) | Plaid: a manual category on a pending transaction is lost when it posts |
-| BUG-15 | High · security | BANK-5 | [#11](https://github.com/harithayalavarthi/spendwise/issues/11) | Failed bank disconnect writes the Plaid access token and secret to the log |
+| BUG-15 | ~~High · security~~ **Fixed 2026-09-28** | BANK-5 | [#11](https://github.com/harithayalavarthi/spendwise/issues/11) | ~~Failed bank disconnect writes the Plaid access token and secret to the log~~ — now only Plaid's error code/message is logged (`plaidErrorSummary`). |
 
 ## 4. Non-functional requirements
 
