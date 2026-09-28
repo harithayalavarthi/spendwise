@@ -1,7 +1,7 @@
 name: CI
 
-# Fast feedback on every PR before it's mergeable — typecheck, lint, and a
-# production build. This is what makes the branch -> PR workflow actually
+# Fast feedback on every PR before it's mergeable — typecheck, lint, tests, and
+# a production build. This is what makes the branch -> PR workflow actually
 # useful: a reviewer (human or agent) doesn't have to manually run these
 # locally to know a PR is broken. Deliberately doesn't run the Electron
 # packaging steps (release.yml) — those are slow (minutes) and only need to
@@ -29,6 +29,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

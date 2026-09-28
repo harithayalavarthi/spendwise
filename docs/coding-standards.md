@@ -117,9 +117,31 @@ just reason about them, per the incidents that established each one:
 
 ## Testing
 
-There's no automated test suite yet (no Jest/Vitest configured). Until one
-exists, a change is verified by actually running it: `npm run typecheck`,
-`npm run lint`, `npm run build`, and exercising the real flow against a dev
-server (upload a throwaway file, check the result, clean up the test
-statement afterward) rather than asserting a change is correct by reading
-the diff alone. If you add a real test framework, update this section.
+Tests use [Vitest](https://vitest.dev) and live in `tests/` (mirroring
+`src/`, e.g. `tests/lib/parseStatement.test.ts`). Run `npm test` (once) or
+`npm run test:watch`. CI runs them on every PR, after typecheck and lint.
+
+Non-negotiables, enforced by `tests/setup.ts` and `tests/setup.test.ts`:
+
+- **Tests never touch the real database.** `db.ts` falls back to
+  `data/spendwise.db` when `SPENDWISE_DATA_DIR` isn't set, so the setup file
+  points every test file at its own temp directory before any app code loads,
+  and refuses to run if that ever resolves to `data/`. Seed rows with
+  `tests/helpers/db.ts`; each test file starts with an empty database.
+- **Synthetic fixtures only** (`tests/fixtures/`, see its README). Never commit
+  a real statement, row, merchant list, or account number — fixtures are pushed.
+- **No network.** `fetch` throws unless a test stubs it
+  (`vi.stubGlobal("fetch", vi.fn(...))`); Plaid and Ollama settings point
+  nowhere. The LLM and Plaid are always faked in tests.
+- **No feature flags on by default** — a test that needs one sets the
+  `FEATURE_*` env var itself.
+- **Known bugs are pinned, not hidden:** when a test documents behavior that's
+  wrong today but deliberately not fixed yet (e.g. BUG-1, Scotiabank signs), use
+  `it.fails(...)` with a comment naming the bug, so fixing it flips the test.
+
+Tests don't replace running the app: for changes to the upload/parsing
+pipeline, still exercise the real flow against a dev server with a throwaway
+file and clean up afterward. Before a PR: `npm run typecheck`, `npm run lint`,
+`npm test`, `npm run build`. (`typecheck` runs `next typegen` first, so it
+works on a fresh checkout — which is what had been breaking CI since
+2026-09-23.)
