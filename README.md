@@ -18,6 +18,8 @@ releases get published. **Both builds are currently unsigned** — see that doc'
 [Code signing](docs/packaging.md#code-signing-not-done) section for what that
 means when you open it.
 
+What's built, what's open, and why: see [specs/](specs/README.md).
+
 ## Stack
 
 - Next.js 16 (App Router) + TypeScript + Tailwind CSS
