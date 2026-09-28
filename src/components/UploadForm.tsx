@@ -14,6 +14,8 @@ interface UploadResult {
   totalStatements: number;
   institution: string | null;
   institutionSource: "user" | "detected" | null;
+  accountType: "bank" | "card" | null;
+  accountTypeSource: "user" | "detected" | null;
 }
 
 export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) {
@@ -21,6 +23,7 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
   const [result, setResult] = useState<UploadResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [institution, setInstitution] = useState("");
+  const [accountType, setAccountType] = useState<"auto" | "bank" | "card">("auto");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -36,6 +39,7 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
     const formData = new FormData();
     formData.append("file", file);
     if (institution.trim()) formData.append("institution", institution.trim());
+    formData.append("accountType", accountType);
 
     try {
       const res = await fetch("/api/upload", { method: "POST", body: formData });
@@ -98,6 +102,23 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
             <option value="American Express" />
           </datalist>
         </label>
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium text-[var(--text-primary)]">
+            Account type{" "}
+            <span className="font-normal text-[var(--text-muted)]">
+              (CSV only — credit card exports list charges as positive amounts)
+            </span>
+          </span>
+          <select
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value as "auto" | "bank" | "card")}
+            className="w-fit rounded-md border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)]"
+          >
+            <option value="auto">Auto-detect</option>
+            <option value="bank">Bank account (chequing / savings)</option>
+            <option value="card">Credit card</option>
+          </select>
+        </label>
         <button
           type="submit"
           disabled={status === "uploading"}
@@ -134,6 +155,12 @@ export default function UploadForm({ onUploaded }: { onUploaded?: () => void }) 
             {result.institutionSource === null &&
               "Couldn't detect an institution from this statement — you can set one later on the Statements list below."}
           </p>
+          {result.accountType && (
+            <p className="mt-1 text-[var(--text-secondary)]">
+              Read as a {result.accountType === "card" ? "credit card" : "bank account"} statement
+              {result.accountTypeSource === "detected" ? " (auto-detected — re-upload with Account type set if that's wrong)" : " (as selected)"}.
+            </p>
+          )}
           {result.llmCategorized > 0 && (
             <p className="mt-1 text-[var(--text-secondary)]">
               {result.llmCategorized} transaction{result.llmCategorized === 1 ? "" : "s"} categorized by

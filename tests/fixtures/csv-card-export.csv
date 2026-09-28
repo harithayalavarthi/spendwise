@@ -1,0 +1,6 @@
+"Date","Posted Date","Reference Number","Activity Type","Status","Transaction Card Number","Merchant Category","Merchant Name","Merchant City","Merchant State/Province","Merchant Country","Merchant Postal Code/Zip","Amount","Rewards","Name on Card"
+"2026-06-02","2026-06-03","""10000000000000000000001""","TRANS","APPROVED","************0000","Grocery Stores and Supermarkets","WOODGROVE MARKET #12","TORONTO","ON","CAN","M5V 0A1","$54.20","","ALEX SAMPLE"
+"2026-06-03","2026-06-04","""10000000000000000000002""","TRANS","APPROVED","************0000","Eating Places and Restaurants","FOURTH COFFEE","TORONTO","ON","CAN","M5V 0A1","$4.75","","ALEX SAMPLE"
+"2026-06-05","2026-06-05","""10000000000000000000003""","TRANS","APPROVED","************0000","","PRE-AUTHORIZED PAYMENT","","","","","-$1,250.00","","ALEX SAMPLE"
+"2026-06-07","2026-06-08","""10000000000000000000004""","TRANS","APPROVED","************0000","Book Stores","LITWARE BOOKS","TORONTO","ON","CAN","M5V 0A1","-$18.99","","ALEX SAMPLE"
+"2026-06-09","2026-06-10","""10000000000000000000005""","TRANS","APPROVED","************0000","Cable, Satellite, and Other Pay Television and Radio Services","CONTOSO CABLE","TORONTO","ON","CAN","M5V 0A1","$112.31","","ALEX SAMPLE"
