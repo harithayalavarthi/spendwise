@@ -1,32 +1,7 @@
 @AGENTS.md
 
-## Workflow
+## Claude-specific
 
-Every change goes through a feature branch and a pull request — never commit
-straight to `main`. Use a feature flag ([src/lib/featureFlags.ts](src/lib/featureFlags.ts))
-for anything large or risky enough to want an off-switch after shipping.
-Full details: [docs/workflow.md](docs/workflow.md).
-
-Before writing code, read [docs/coding-standards.md](docs/coding-standards.md)
-— this project's actual TypeScript/comment/logging/file-organization
-conventions and non-negotiable privacy invariants, not generic defaults.
-
-## Skills
-
-`.claude/skills/` has project-specific playbooks for recurring tasks —
-`start-feature` (branch/flag/PR mechanics for any change), `cut-release`
-(tagging and verifying a desktop release, including known CI failure modes),
-`add-bank` (adding auto-detection for a new financial institution's
-statements). Use the matching one instead of improvising when the task fits.
-
-## Reference docs
-
-[specs/](specs/README.md) — requirements with IDs and status (Built/Partial/Open),
-decisions, and the roadmap of open work. Update the relevant requirement in the
-same PR as the change, and reference its ID.
-
-[docs/database-schema.md](docs/database-schema.md) (schema, migrations,
-known data issues), [docs/packaging.md](docs/packaging.md) (Electron/release
-architecture and its incident history), [docs/plaid-bank-sync.md](docs/plaid-bank-sync.md)
-(direct bank connections — architecture, the privacy tradeoff, why it's
-app-level token encryption not OS-keychain, sign-convention gotcha).
+The playbooks in `.claude/skills/` are also available as Claude Code skills
+(`start-feature`, `cut-release`, `add-bank`) — invoke the matching one rather
+than improvising.
