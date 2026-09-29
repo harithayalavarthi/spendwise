@@ -145,6 +145,7 @@ suggested fix. When one is fixed, mark it here with the PR number.
 | NFR-5 | Built | Server-side logging for the upload/categorization pipeline via `src/lib/logger.ts`. |
 | NFR-6 | Built | **Automated tests** with Vitest (`npm test`, `tests/`, run in CI): a safety harness (throwaway database per test file, guard against the real `data/`, network blocked, synthetic fixtures only) and suites for CSV/PDF import, categorization (incl. the NFR-2 privacy check), analytics, Plaid sync, token encryption, and feature flags — 428 tests as of 2026-09-28, 16 of them `it.fails` pins for BUG-1…15. Not yet covered: API route handlers beyond Plaid errors, and the UI. Rules in [docs/coding-standards.md](../docs/coding-standards.md) "Testing". |
 | NFR-7 | Built | **CI on pull requests** (`.github/workflows/ci.yml`): typecheck, lint, tests, and build on every PR and push to `main`. It had been failing at typecheck since 2026-09-23 (Next's generated route types were missing on a fresh checkout); fixed 2026-09-28 by running `next typegen` first. |
+| NFR-8 | Built | **Big-picture docs stay current (DOC-1):** [docs/architecture.md](../docs/architecture.md) (diagram, request paths, every module/route/page/component, where to change what) and [docs/database-schema.md](../docs/database-schema.md) are updated in the same PR as the change; `tests/docs.test.ts` fails if a `src/lib` module, API route, page, component, Electron file, script, table, or column is missing from them. Added 2026-09-29. |
 
 ## 5. Open questions
 
