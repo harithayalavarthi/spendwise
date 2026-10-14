@@ -354,14 +354,11 @@ describe("syncPlaidItem — categorization (BANK-3)", () => {
     expect(storedRows()[0]).toMatchObject({ category: "Dining & Coffee", description: "STARBUCKS 0421" });
   });
 
-  // BUG: a manual correction on a *pending* transaction is lost when it posts.
-  // Plaid delivers pending -> posted as "remove the pending id, add a new id"
-  // (with pending_transaction_id pointing back). plaidSync only checks locks
-  // by the incoming transaction_id, so the posted row is re-categorized from
-  // scratch and the locked pending row is deleted — BANK-3's "locked manual
-  // corrections survive re-syncs" doesn't hold across posting. Flips to a
-  // pass once the lock is carried over via pending_transaction_id.
-  it.fails("carries a locked category from a pending transaction over to its posted replacement", async () => {
+  // BUG-14 (fixed): Plaid delivers pending -> posted as "remove the pending
+  // id, add a new id" with pending_transaction_id pointing back, so the lock
+  // has to be carried across or BANK-3's "locked manual corrections survive
+  // re-syncs" doesn't hold once a transaction posts.
+  it("carries a locked category from a pending transaction over to its posted replacement", async () => {
     const { plaidItemId } = seedPlaidItem();
     queueSyncPages(
       { added: [{ transaction_id: "txn_sbx_pend", name: "STARBUCKS 0421", amount: 4.75, pending: true }], next_cursor: "c1" },

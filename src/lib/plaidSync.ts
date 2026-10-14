@@ -61,13 +61,15 @@ export async function syncPlaidItem(plaidItemDbId: number): Promise<SyncResult> 
   );
 
   const existingLocked = db.prepare(
-    `SELECT plaid_transaction_id FROM transactions WHERE plaid_transaction_id IS NOT NULL AND category_locked = 1`
+    `SELECT plaid_transaction_id, category FROM transactions WHERE plaid_transaction_id IS NOT NULL AND category_locked = 1`
   );
-  const lockedIds = new Set((existingLocked.all() as Array<{ plaid_transaction_id: string }>).map((r) => r.plaid_transaction_id));
+  const lockedCategories = new Map(
+    (existingLocked.all() as Array<{ plaid_transaction_id: string; category: string }>).map((r) => [r.plaid_transaction_id, r.category])
+  );
 
   const insert = db.prepare(
-    `INSERT INTO transactions (statement_id, date, description, amount, category, hash, institution, plaid_transaction_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO transactions (statement_id, date, description, amount, category, category_locked, hash, institution, plaid_transaction_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   const updateWithCategory = db.prepare(
     `UPDATE transactions SET date = ?, description = ?, amount = ?, category = ?, hash = ?
@@ -83,7 +85,7 @@ export async function syncPlaidItem(plaidItemDbId: number): Promise<SyncResult> 
   // better-sqlite3's synchronous transactions can't wrap — resolve every
   // category first, then write everything in one fast sync transaction,
   // the same pattern as the upload route.
-  const toInsert: Array<{ p: PlaidTransaction; date: string; description: string; amount: number; category: string; hash: string }> = [];
+  const toInsert: Array<{ p: PlaidTransaction; date: string; description: string; amount: number; category: string; locked: boolean; hash: string }> = [];
   for (const p of [...added, ...modified]) {
     const date = p.date;
     const description = p.merchant_name || p.name;
@@ -95,14 +97,24 @@ export async function syncPlaidItem(plaidItemDbId: number): Promise<SyncResult> 
     const amount = -p.amount;
     const hash = transactionHash(date, description, amount);
 
-    if (lockedIds.has(p.transaction_id)) {
+    if (lockedCategories.has(p.transaction_id)) {
       // User already corrected this one — keep their category, just refresh
       // the other fields in case Plaid revised the pending->posted details.
       updateWithoutCategory.run(date, description, amount, hash, p.transaction_id);
       continue;
     }
+    // Posting arrives as remove(pending id) + add(new id) with
+    // pending_transaction_id pointing back, so a lock set on the pending row
+    // has to move to the posted one before the removal below deletes it
+    // (BUG-14). Plaid leaves pending_transaction_id null when it can't match
+    // the two, and those posts are categorized from scratch as before.
+    const carried = p.pending_transaction_id ? lockedCategories.get(p.pending_transaction_id) : undefined;
+    if (carried !== undefined) {
+      toInsert.push({ p, date, description, amount, category: carried, locked: true, hash });
+      continue;
+    }
     const { category } = await categorizeTransaction(description, amount);
-    toInsert.push({ p, date, description, amount, category, hash });
+    toInsert.push({ p, date, description, amount, category, locked: false, hash });
   }
 
   const write = db.transaction(() => {
@@ -111,7 +123,7 @@ export async function syncPlaidItem(plaidItemDbId: number): Promise<SyncResult> 
       if (isModified) {
         updateWithCategory.run(t.date, t.description, t.amount, t.category, t.hash, t.p.transaction_id);
       } else {
-        insert.run(item.statement_id, t.date, t.description, t.amount, t.category, t.hash, institution, t.p.transaction_id);
+        insert.run(item.statement_id, t.date, t.description, t.amount, t.category, t.locked ? 1 : 0, t.hash, institution, t.p.transaction_id);
       }
     }
     for (const id of removed) {

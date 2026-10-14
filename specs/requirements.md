@@ -68,7 +68,7 @@ Details: [docs/plaid-bank-sync.md](../docs/plaid-bank-sync.md).
 |---|---|---|
 | BANK-1 | Built | Connect a bank via **Plaid** (Sandbox) on an Accounts page shown only when `FEATURE_BANK_SYNC=true`; a connection is modeled as a `statements` row with `source = 'plaid'`. |
 | BANK-2 | Built | **Incremental sync** with Plaid's `/transactions/sync` cursor (added/modified/removed), keyed by `plaid_transaction_id`, plus the content hash as a safety net against CSV overlap. Plaid's sign is flipped to the app's convention. |
-| BANK-3 | Partial | Synced transactions use the same categorization pipeline (CAT-1); locked manual corrections survive re-syncs. _Open defect(s): BUG-14._ |
+| BANK-3 | Built | Synced transactions use the same categorization pipeline (CAT-1); locked manual corrections survive re-syncs, including a pending transaction posting (BUG-14 fixed). |
 | BANK-4 | Built | Sync is **manual ("Sync now") plus best-effort when the Accounts page loads** — no webhooks (a local app has no public endpoint). |
 | BANK-5 | Built | Access tokens are **encrypted at rest** (AES-256-GCM, key in a `0600` file next to the database).Plaid errors are logged only as code/message, never the raw error (BUG-15 fixed). |
 | BANK-6 | Built | Disconnecting revokes the item at Plaid and deletes its local transactions. |
@@ -130,7 +130,7 @@ suggested fix. When one is fixed, mark it here with the PR number.
 | BUG-11 | Low | CAT-3 | [#24](https://github.com/harithayalavarthi/spendwise/issues/24) | Merchant key keeps short MM/DD dates, so the same merchant is re-sent to the LLM |
 | BUG-12 | High | DASH-3 | [#16](https://github.com/harithayalavarthi/spendwise/issues/16) | "Top spending days" names the day's smallest expense as its biggest |
 | BUG-13 | Low | DASH-5 | [#25](https://github.com/harithayalavarthi/spendwise/issues/25) | Missed-payment suggestion wording: "every weekly", "every quarterly" |
-| BUG-14 | Medium | BANK-3 | [#21](https://github.com/harithayalavarthi/spendwise/issues/21) | Plaid: a manual category on a pending transaction is lost when it posts |
+| BUG-14 | ~~Medium~~ **Fixed 2026-10-14** | BANK-3 | [#21](https://github.com/harithayalavarthi/spendwise/issues/21) | ~~Plaid: a manual category on a pending transaction is lost when it posts~~ — the lock now moves to the posted transaction via `pending_transaction_id`. |
 | BUG-15 | ~~High · security~~ **Fixed 2026-09-28** | BANK-5 | [#11](https://github.com/harithayalavarthi/spendwise/issues/11) | ~~Failed bank disconnect writes the Plaid access token and secret to the log~~ — now only Plaid's error code/message is logged (`plaidErrorSummary`). |
 | BUG-16 | ~~High~~ **Fixed 2026-09-28** | IMP-1 | [#28](https://github.com/harithayalavarthi/spendwise/issues/28) | ~~CSV used "Merchant Category" as the description (first header containing "merchant") and dropped rows with a blank category — card payments.~~ Now prefers Description / Merchant Name, never uses category/location columns, and falls back instead of dropping; stored rows rebuilt by the BUG-1 repair. |
 

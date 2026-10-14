@@ -129,7 +129,11 @@ an uploaded statement (keyword → merchant cache → LLM → fallback) — not
 Plaid's own category taxonomy — so the dashboard has one consistent category
 system regardless of where a transaction came from. A manual category
 correction (`category_locked = 1`) is respected on every future sync: a
-re-sync of a modified transaction skips re-categorizing it.
+re-sync of a modified transaction skips re-categorizing it, and when a locked
+pending transaction posts (a new `transaction_id` whose
+`pending_transaction_id` points back), the posted row inherits its category
+and lock. Plaid leaves `pending_transaction_id` null when it can't match the
+two, and such a post is categorized from scratch.
 
 ## Explicitly out of scope (for now)
 
